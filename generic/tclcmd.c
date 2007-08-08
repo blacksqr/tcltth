@@ -26,6 +26,7 @@
 #include "tiger.h"
 #include "tigertree.h"
 #include "base32.h"
+#include "tclcmd.h"
 
 #define TCL_READ_CHUNK_SIZE 4096
 

@@ -69,7 +69,7 @@
       round(b,c,a,x7,mul)
 
 #define key_schedule \
-      x0 -= x7 ^ 0xA5A5A5A5A5A5A5A5LL; \
+      x0 -= x7 ^ LL(0xA5A5A5A5A5A5A5A5); \
       x1 ^= x0; \
       x2 += x1; \
       x3 -= x2 ^ ((~x1)<<19); \
@@ -84,7 +84,7 @@
       x4 -= x3 ^ ((~x2)>>23); \
       x5 ^= x4; \
       x6 += x5; \
-      x7 -= x6 ^ 0x0123456789ABCDEFLL;
+      x7 -= x6 ^ LL(0x0123456789ABCDEF);
 
 #define feedforward \
       a ^= aa; \
@@ -156,9 +156,9 @@ void tiger(word64 *str, word64 length, word64 res[3])
   register word64 i, j;
   unsigned char temp[64];
 
-  res[0]=0x0123456789ABCDEFLL;
-  res[1]=0xFEDCBA9876543210LL;
-  res[2]=0xF096A5B4C3B2E187LL;
+  res[0]=LL(0x0123456789ABCDEF);
+  res[1]=LL(0xFEDCBA9876543210);
+  res[2]=LL(0xF096A5B4C3B2E187);
 
   for(i=length; i>=64; i-=64)
     {

@@ -1,0 +1,2 @@
+Another free software C implementation incl. TTH on files:
+http://rehash.sourceforge.net/

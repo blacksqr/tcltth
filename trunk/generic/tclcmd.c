@@ -1,21 +1,16 @@
 /*
- * tclsample.c --
+ * tclcmd.c --
  *
- *	This file implements a Tcl interface to the secure hashing
- *	algorithm functions in sha1.c
+ *	This file implements a Tcl interface to the Tiger Hash
+ *	and Tiger Tree Hashing algorythms.
  *
- * Copyright (c) 1999 Scriptics Corporation.
- * Copyright (c) 2003 ActiveState Corporation.
+ * Copyright (c) 2007 Konstantin Khomoutov <flatworm@users.sourceforge.net>
  *
  * See the file "license.terms" for information on usage and redistribution
  * of this file, and for a DISCLAIMER OF ALL WARRANTIES.
  *
  * $Id$
  *
- */
-
-/*
- * Modified from tclmd5.c by Dave Dykstra, dwd@bell-labs.com, 4/22/97
  */
 
 #include <tcl.h>
@@ -28,9 +23,10 @@
 #include "base32.h"
 #include "tclcmd.h"
 
-#define TCL_READ_CHUNK_SIZE 4096
-
-typedef {
+/*
+ * Per-interpreter data storage accociated with the ::tth::tth Tcl command.
+ */
+typedef struct {
 	Tcl_HashTable contexts;
 	unsigned int uid;
 } TTH_State;
@@ -76,6 +72,7 @@ TTH_CreateContext (
 	TT_CONTEXT *contextPtr;
 
 	sprintf(token, "tth%u", statePtr->uid);
+	++statePtr->uid;
 
 	entryPtr = Tcl_CreateHashEntry(&statePtr->contexts, token, &new);
 	if (new != 1) {
@@ -86,7 +83,7 @@ TTH_CreateContext (
 	Tcl_SetHashValue(entryPtr, (ClientData)contextPtr);
 	tt_init(contextPtr);
 
-	Tcl_SetStringObj(tokenPtr, token, TCL_VOLATILE);
+	Tcl_SetStringObj(tokenPtr, token, -1);
 }
 
 
@@ -101,6 +98,54 @@ TTH_FindContext (
 {
 	return Tcl_FindHashEntry(&statePtr->contexts,
 			Tcl_GetString(tokenPtr));
+}
+
+
+/*
+ *
+ */
+void
+TTH_GetDigest (
+		TTH_State *statePtr,
+		Tcl_Obj   *tokenPtr,
+		Tcl_Obj   *digestPtr
+		)
+{
+	Tcl_HashEntry *entryPtr;
+	TT_CONTEXT *contextPtr;
+	char digest[TIGERSIZE];
+	char TTX[BASE32_DESTLEN(TIGERSIZE)];
+
+	entryPtr = TTH_FindContext(statePtr, tokenPtr);
+	contextPtr = (TT_CONTEXT *) Tcl_GetHashValue(entryPtr);
+
+	tt_digest(contextPtr, digest);
+	to_base32(digest, TIGERSIZE, TTX);
+
+	Tcl_SetStringObj(digestPtr, TTX, -1);
+}
+
+
+/*
+ *
+ */
+void
+TTH_UpdateContext (
+		TTH_State *statePtr,
+		Tcl_Obj   *tokenPtr,
+		Tcl_Obj   *dataPtr 
+		)
+{
+	Tcl_HashEntry *entryPtr;
+	TT_CONTEXT    *contextPtr;
+	CONST char    *bytesPtr;
+	int           len;
+
+	entryPtr = TTH_FindContext(statePtr, tokenPtr);
+	contextPtr = (TT_CONTEXT *) Tcl_GetHashValue(entryPtr);
+
+	bytesPtr = Tcl_GetByteArrayFromObj(dataPtr, &len);
+	tt_update(contextPtr, bytesPtr, len);
 }
 
 
@@ -124,9 +169,10 @@ TTH_DeleteContext (
 /*
  *----------------------------------------------------------------------
  *
- * Sha1 --
+ * TTH_Cmd --
  *
- *	 Implements the new Tcl "sha1" command.
+ *	Implements the new Tcl "tth" command
+ *	placed in the "::tth" namespace.
  *
  * Results:
  *	A standard Tcl result
@@ -148,6 +194,8 @@ TTH_Cmd(
 	static const char *options[] = { "init", "update", "digest", NULL };
 	typedef enum { TTH_INIT, TTH_UPDATE, TTH_DIGEST } TTH_Option;
 	int i;
+	TTH_State *statePtr;
+	Tcl_Obj *resultPtr;
 
 	if (objc == 1) {
 		Tcl_SetResult(interp, "\
@@ -167,21 +215,20 @@ where options are: -base32|-hex, -le|-be|-ref",
 	if (Tcl_GetIndexFromObj(interp, objv[1], options, "option",
 			0, &i) != TCL_OK) { return TCL_ERROR; }
 
+	statePtr = (TTH_State *) clientData;
+
 	switch ((TTH_Option)i) {
-		TTH_State *statePtr;
-		unsigned char *parray;
-		int len;
-
-		statePtr = (TTH_State *) ClientData;
-
 		case TTH_INIT:
 			if (objc != 2) {
 				Tcl_WrongNumArgs(interp, 2, objv, NULL);
 				return TCL_ERROR;
 			}
-			TTH_CreateContext(statePtr, 
-			sprintf(token, "tth%u", nctx);
-			Tcl_SetResult(interp, token, TCL_VOLATILE);
+			resultPtr = Tcl_GetObjResult(interp);
+			if (Tcl_IsShared(resultPtr)) {
+				resultPtr = Tcl_DuplicateObj(resultPtr);
+			}
+			TTH_CreateContext(statePtr, resultPtr);
+			Tcl_SetObjResult(interp, resultPtr);
 			return TCL_OK;
 		break;
 
@@ -191,17 +238,34 @@ where options are: -base32|-hex, -le|-be|-ref",
 						"tthContext sourceString");
 				return TCL_ERROR;
 			}
-			parray = Tcl_GetByteArrayFromObj(objv[2], &len);
-			tt_update(&ttcontexts[0], parray, len);
+			/* TODO check whether the given context exists.
+			 * May be do so inside TTH_UpdateContext */
+			TTH_UpdateContext(statePtr, objv[2], objv[3]);
 			Tcl_ResetResult(interp);
 			return TCL_OK;
 		break;
 
 		case TTH_DIGEST:
-			Tcl_AppendResult(interp, "not implemented", NULL);
-			return TCL_ERROR;
+			if (objc != 3) {
+				Tcl_WrongNumArgs(interp, 2, objv,
+						"tthContext");
+				return TCL_ERROR;
+			}
+			/* TODO check whether the given context exists.
+			 * May be do so inside TTH_UpdateContext */
+			resultPtr = Tcl_GetObjResult(interp);
+			if (Tcl_IsShared(resultPtr)) {
+				resultPtr = Tcl_DuplicateObj(resultPtr);
+			}
+			TTH_GetDigest(statePtr, objv[2], resultPtr);
+			Tcl_SetObjResult(interp, resultPtr);
+			TTH_DeleteContext(TTH_FindContext(
+						statePtr, objv[2]));
+			return TCL_OK;
 		break;
 	}
+
+	return TCL_OK;
 }
 
 
@@ -210,16 +274,14 @@ where options are: -base32|-hex, -le|-be|-ref",
  *
  * Tcltth_Init --
  *
- *	Initialize the new package.  The string "Sample" in the
- *	function name must match the PACKAGE declaration at the top of
- *	configure.in.
+ *	Initializes package "tcltth".
  *
  * Results:
  *	A standard Tcl result
  *
  * Side effects:
- *	The Tclsha1 package is created.
- *	One new command "sha1" is added to the Tcl interpreter.
+ *	The "tcltth" package is created.
+ *	One new command "::tth::tth" is added to the Tcl interpreter.
  *
  *----------------------------------------------------------------------
  */
@@ -227,7 +289,7 @@ where options are: -base32|-hex, -le|-be|-ref",
 int
 Tcltth_Init(Tcl_Interp *interp)
 {
-	TTH_State *statePtr
+	TTH_State *statePtr;
 	/*
 	 * This may work with 8.0, but we are using strictly stubs here,
 	 * which requires 8.1.

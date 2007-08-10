@@ -91,7 +91,7 @@ static void tt_block(TT_CONTEXT *ctx)
   }
 }
 
-void tt_update(TT_CONTEXT *ctx, byte *buffer, word32 len)
+void tt_update(TT_CONTEXT *ctx, const byte *buffer, word32 len)
 {
 
   if (ctx->index)
@@ -99,13 +99,13 @@ void tt_update(TT_CONTEXT *ctx, byte *buffer, word32 len)
 	  unsigned left = BLOCKSIZE - ctx->index;
 	  if (len < left)
 		{
-		memmove(ctx->block + ctx->index, buffer, len);
+		memcpy(ctx->block + ctx->index, buffer, len);
 		ctx->index += len;
 		return; /* Finished */
 		}
 	  else
 		{
-		memmove(ctx->block + ctx->index, buffer, left);
+		memcpy(ctx->block + ctx->index, buffer, left);
 		ctx->index = BLOCKSIZE;
 		tt_block(ctx);
 		buffer += left;
@@ -115,7 +115,7 @@ void tt_update(TT_CONTEXT *ctx, byte *buffer, word32 len)
 
   while (len >= BLOCKSIZE)
 	{
-	memmove(ctx->block, buffer, BLOCKSIZE);
+	memcpy(ctx->block, buffer, BLOCKSIZE);
 	ctx->index = BLOCKSIZE;
 	tt_block(ctx);
 	buffer += BLOCKSIZE;
@@ -124,7 +124,7 @@ void tt_update(TT_CONTEXT *ctx, byte *buffer, word32 len)
   if ((ctx->index = len))     /* This assignment is intended */
 	{
 	/* Buffer leftovers */
-	memmove(ctx->block, buffer, len);
+	memcpy(ctx->block, buffer, len);
 	}
 }
 
@@ -143,7 +143,7 @@ void tt_digest(TT_CONTEXT *ctx, byte *s)
   while( (ctx->top-TIGERSIZE) > ctx->nodes ) {
     tt_compose(ctx);
   }
-  memmove(s,ctx->nodes,TIGERSIZE);
+  memcpy(s,ctx->nodes,TIGERSIZE);
 }
 
 void tt_endian(byte *s)

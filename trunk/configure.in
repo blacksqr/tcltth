@@ -78,7 +78,7 @@ AC_C_BIGENDIAN
 #-----------------------------------------------------------------------
 
 TEA_ADD_SOURCES([tiger.c tigertree.c base32.c \
-	tclinit.c tcltth.c])
+	tclinit.c tcltth.c tcltiger.c tclout.c])
 TEA_ADD_HEADERS([])
 TEA_ADD_INCLUDES([])
 TEA_ADD_LIBS([])

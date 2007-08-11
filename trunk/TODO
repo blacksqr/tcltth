@@ -1,0 +1,25 @@
+$Id$
+
+HIGH:
+
+* Check the context name for existense in [tth update].
+
+* Implement -chan for [tth].
+
+* Implement -hex for [tth].
+
+* Check how -base32 and -raw work for [tiger].
+
+* Write tests to test -raw output of [tth] and [tiger].
+
+LOW:
+
+* Move base32 impl. directly to DigestToBase32().
+
+* Write more tests, also for syntax issues after the implementation
+  is complete and interfaces are stable.
+
+* Write a script to convert NESSIE testvectors to tcltest tests
+  and run the implementation through them.
+  Handcrafting of the test suite is also plausible.
+

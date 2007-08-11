@@ -6798,7 +6798,7 @@ esac
 
 
     vars="tiger.c tigertree.c base32.c \
-	tclinit.c tcltth.c"
+	tclinit.c tcltth.c tcltiger.c tclout.c"
     for i in $vars; do
 	case $i in
 	    \$*)

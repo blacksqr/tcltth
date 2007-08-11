@@ -17,6 +17,7 @@
 #include <tcl.h>
 
 #include "tcltth.h"
+#include "tcltiger.h"
 
 #ifdef BUILD_tcltth
 #undef TCL_STORAGE_CLASS
@@ -57,6 +58,7 @@ Tcltth_Init(Tcl_Interp *interp)
 		return TCL_ERROR;
 	}
 
+	if (Tiger_CreateCmd(interp) == NULL) { return TCL_ERROR; }
 	if (TTH_CreateCmd(interp) == NULL) { return TCL_ERROR; }
 
 	if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION) != TCL_OK) {

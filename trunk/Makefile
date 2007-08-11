@@ -35,8 +35,8 @@
 # $(srcdir) or in the generic, win or unix subdirectory.
 #========================================================================
 
-PKG_SOURCES	=  tiger.c tigertree.c base32.c tclinit.c tcltth.c
-PKG_OBJECTS	=  tiger.o tigertree.o base32.o tclinit.o tcltth.o
+PKG_SOURCES	=  tiger.c tigertree.c base32.c tclinit.c tcltth.c tcltiger.c tclout.c
+PKG_OBJECTS	=  tiger.o tigertree.o base32.o tclinit.o tcltth.o tcltiger.o tclout.o
 
 PKG_STUB_SOURCES = 
 PKG_STUB_OBJECTS = 
@@ -95,7 +95,7 @@ INSTALL_SCRIPT	= ${INSTALL}
 PACKAGE_NAME	= tcltth
 PACKAGE_VERSION	= 0.1
 CC		= gcc
-CFLAGS_DEFAULT	= -O2 -fomit-frame-pointer
+CFLAGS_DEFAULT	= -g
 CFLAGS_WARNING	= -Wall -Wno-implicit-int
 EXEEXT		= 
 LDFLAGS_DEFAULT	=  -Wl,--export-dynamic 

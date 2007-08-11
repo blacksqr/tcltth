@@ -16,9 +16,6 @@
  */
 #include "tiger.h"
 
-/* tiger hash result size, in bytes */
-#define TIGERSIZE 24
-
 /* size of each block independently tiger-hashed, not counting leaf 0x00 prefix */
 #define BLOCKSIZE 1024
 

@@ -35,8 +35,8 @@
 # $(srcdir) or in the generic, win or unix subdirectory.
 #========================================================================
 
-PKG_SOURCES	=  tiger.c tigertree.c base32.c tclcmd.c
-PKG_OBJECTS	=  tiger.o tigertree.o base32.o tclcmd.o
+PKG_SOURCES	=  tiger.c tigertree.c base32.c tclinit.c tcltth.c
+PKG_OBJECTS	=  tiger.o tigertree.o base32.o tclinit.o tcltth.o
 
 PKG_STUB_SOURCES = 
 PKG_STUB_OBJECTS = 

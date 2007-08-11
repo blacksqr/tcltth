@@ -1,8 +1,8 @@
 /*
- * tclcmd.c --
+ * tcltth.c --
  *
- *	This file implements a Tcl interface to the Tiger Hash
- *	and Tiger Tree Hashing algorythms.
+ *	This file implements a Tcl interface to the
+ *	Tiger Tree Hashing (TTH) algorythm with support for TTX.
  *
  * Copyright (c) 2007 Konstantin Khomoutov <flatworm@users.sourceforge.net>
  *
@@ -18,10 +18,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "tiger.h"
 #include "tigertree.h"
 #include "base32.h"
-#include "tclcmd.h"
+#include "tcltth.h"
 
 /*
  * Per-interpreter data storage accociated with the ::tth::tth Tcl command.
@@ -35,7 +34,7 @@ typedef struct {
 /*
  *
  */
-void
+static void
 TTH_CleanupState (
 		ClientData clientData
 		)
@@ -60,7 +59,7 @@ TTH_CleanupState (
 /*
  *
  */
-void
+static void
 TTH_CreateContext (
 		TTH_State *statePtr,
 		Tcl_Obj   *tokenPtr
@@ -90,7 +89,7 @@ TTH_CreateContext (
 /*
  *
  */
-Tcl_HashEntry *
+static Tcl_HashEntry *
 TTH_FindContext (
 		TTH_State *statePtr,
 		Tcl_Obj   *tokenPtr
@@ -104,7 +103,7 @@ TTH_FindContext (
 /*
  *
  */
-void
+static void
 TTH_UpdateContext (
 		TTH_State *statePtr,
 		Tcl_Obj   *tokenPtr,
@@ -127,7 +126,7 @@ TTH_UpdateContext (
 /*
  *
  */
-void
+static void
 TTH_DeleteContext (
 		Tcl_HashEntry *entryPtr
 		)
@@ -309,7 +308,7 @@ Cmd_ParseDigestOptions (
  *----------------------------------------------------------------------
  */
 
-static int
+int
 TTH_Cmd(
 	ClientData clientData,  /* pointer to a TTH_State object */
 	Tcl_Interp *interp,     /* Current interpreter */
@@ -419,49 +418,21 @@ where options are: -base32|-hex, -le|-be|-ref",
 
 
 /*
- *----------------------------------------------------------------------
  *
- * Tcltth_Init --
- *
- *	Initializes package "tcltth".
- *
- * Results:
- *	A standard Tcl result
- *
- * Side effects:
- *	The "tcltth" package is created.
- *	One new command "::tth::tth" is added to the Tcl interpreter.
- *
- *----------------------------------------------------------------------
  */
-
-int
-Tcltth_Init(Tcl_Interp *interp)
+Tcl_Command
+TTH_CreateCmd (
+		Tcl_Interp *interp
+		)
 {
 	TTH_State *statePtr;
-	/*
-	 * This may work with 8.0, but we are using strictly stubs here,
-	 * which requires 8.1.
-	 */
-	if (Tcl_InitStubs(interp, "8.1", 0) == NULL) {
-		return TCL_ERROR;
-	}
-	if (Tcl_PkgRequire(interp, "Tcl", "8.1", 0) == NULL) {
-		return TCL_ERROR;
-	}
 
 	statePtr = (TTH_State *) ckalloc(sizeof(TTH_State));
 	Tcl_InitHashTable(&statePtr->contexts, TCL_STRING_KEYS);
 	statePtr->uid = 0;
 
-	Tcl_CreateObjCommand(interp, "::tth::tth",
+	return Tcl_CreateObjCommand(interp, "::tth::tth",
 		(Tcl_ObjCmdProc *) TTH_Cmd,
 		(ClientData) statePtr, (Tcl_CmdDeleteProc *) TTH_CleanupState);
-
-	if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION) != TCL_OK) {
-		return TCL_ERROR;
-	}
-
-	return TCL_OK;
 }
 

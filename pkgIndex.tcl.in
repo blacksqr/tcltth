@@ -4,6 +4,6 @@
 package ifneeded @PACKAGE_NAME@ @PACKAGE_VERSION@ \
 		[string map [list \$dir $dir] {
     load [file join $dir @PKG_LIB_FILE@] @PACKAGE_NAME@
-	namespace eval ::tth { namespace export tth }
+	namespace eval ::tth { namespace export tiger tth }
 }]
 

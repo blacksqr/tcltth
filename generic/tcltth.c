@@ -19,7 +19,7 @@
 #include <string.h>
 
 #include "tigertree.h"
-#include "base32.h"
+#include "tclout.h"
 #include "tcltth.h"
 
 /*
@@ -193,38 +193,6 @@ TTH_GetDigestFromString (
 /*
  *
  */
-static void
-TTH_DigestToBase32 (
-		byte    digest[],
-		Tcl_Obj *resultPtr
-		)
-{
-	char TTX[BASE32_DESTLEN(TIGERSIZE)];
-
-	to_base32(digest, TIGERSIZE, TTX);
-	Tcl_SetStringObj(resultPtr, TTX, -1);
-}
-
-
-/*
- *
- */
-static void
-TTH_DigestToRaw (
-		byte    digest[],
-		Tcl_Obj *resultPtr
-		)
-{
-	unsigned char *bytesPtr;
-
-	bytesPtr = Tcl_SetByteArrayLength(resultPtr, TIGERSIZE);
-	memcpy(bytesPtr, digest, TIGERSIZE);
-}
-
-
-/*
- *
- */
 typedef enum {
 	DM_CONTEXT,   /* -context, default */
 	DM_STRING,    /* -string */
@@ -308,7 +276,7 @@ Cmd_ParseDigestOptions (
  *----------------------------------------------------------------------
  */
 
-int
+static int
 TTH_Cmd(
 	ClientData clientData,  /* pointer to a TTH_State object */
 	Tcl_Interp *interp,     /* Current interpreter */
@@ -401,14 +369,14 @@ where options are: -base32|-hex, -le|-be|-ref",
 			}
 			switch (dout) {
 				case DO_BASE32:
-					TTH_DigestToBase32(digest, resultPtr);
+					Tcl_SetObjResult(interp,
+						DigestToBase32(digest));
 				break;
 				case DO_RAW:
-					TTH_DigestToRaw(digest, resultPtr);
+					Tcl_SetObjResult(interp,
+						DigestToRaw(digest));
 				break;
 			}
-			/* Tcl_SetIntObj(resultPtr, (dmode << 4 | dout) & 0xFF); */
-			Tcl_SetObjResult(interp, resultPtr);
 			return TCL_OK;
 		break;
 	}

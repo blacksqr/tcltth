@@ -29,6 +29,9 @@ typedef unsigned short word16;
 typedef unsigned long word32;
 typedef unsigned char byte;
 
+/* tiger hash result size, in bytes */
+#define TIGERSIZE 24
+
 void tiger(word64 *str, word64 length, word64 res[3]);
 
 #endif /* __TIGER_H */

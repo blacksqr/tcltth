@@ -43,9 +43,17 @@ test tth-2.2 {context-based of empty message, several updates} -body {
 	tth digest $ctx
 } -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
 
-test tth-3.1 {digest of empty string, direct} -body {
-	tth digest -ttx -string ""
-} -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
+test tth-3.1 {hex digest of an empty string} -body {
+	string toupper [tiger -hex ""]
+} -result 3293AC630C13F0245F92BBB1766E16167A4E58492DDE73F3
+
+test tth-3.2 {hex digest of the string "a"} -body {
+	string toupper [tiger -hex "a"]
+} -result 77BEFBEF2E7EF8AB2EC8F93BF587A7FC613E247F5F247809
+
+test tth-3.3 {hex digest of the string "abc"} -body {
+	string toupper [tiger -hex "abc"]
+} -result 2AAB1484E8C158F2BFB8C5FF41B57A525129131C957B5F93
 
 test tth-100.2 {-chan not implemented} -body {
 	set ctx1 [tth init]

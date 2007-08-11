@@ -11,8 +11,8 @@ package require tcltth
 namespace import ::tth::*
 
 test tth-1.1 {generation of unique TTH context tags} -body {
-	list [tth init] [tth init] [tth init]
-} -result [list tth0 tth1 tth2]
+	string equal [tth init] [tth init]
+} -result 0
 
 test tth-1.2 {TTH contexts are independent} -body {
 	set ctx1 [tth init]
@@ -21,6 +21,37 @@ test tth-1.2 {TTH contexts are independent} -body {
 	tth update $ctx2 foo
 	string equal [tth digest $ctx1] [tth digest $ctx2]
 } -result 0
+
+if 0 {
+test tth-1.3 {update for invalid context should fail} -body {
+} -returnCodes error -result {can not find context named "non_existent"}
+}
+
+test tth-1.4 {digest for invalid context should fail} -body {
+	set ctx [tth init]
+	tth digest -context non_existent
+} -returnCodes error -result {can not find context named "non_existent"}
+
+test tth-2.1 {context-based of empty message, no updates} -body {
+	tth digest [tth init]
+} -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
+
+test tth-2.2 {context-based of empty message, several updates} -body {
+	set ctx [tth init]
+	tth update $ctx ""
+	tth update $ctx ""
+	tth digest $ctx
+} -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
+
+test tth-3.1 {digest of empty string, direct} -body {
+	tth digest -ttx -string ""
+} -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
+
+test tth-100.2 {-chan not implemented} -body {
+	set ctx1 [tth init]
+	tth update $ctx1 foo
+	tth digest -chan $ctx1
+} -returnCodes error -result "not implemented"
 
 # cleanup
 ::tcltest::cleanupTests

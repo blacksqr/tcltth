@@ -77,7 +77,8 @@ AC_C_BIGENDIAN
 # and PKG_TCL_SOURCES.
 #-----------------------------------------------------------------------
 
-TEA_ADD_SOURCES([tiger.c tigertree.c base32.c tclcmd.c])
+TEA_ADD_SOURCES([tiger.c tigertree.c base32.c \
+	tclinit.c tcltth.c])
 TEA_ADD_HEADERS([])
 TEA_ADD_INCLUDES([])
 TEA_ADD_LIBS([])

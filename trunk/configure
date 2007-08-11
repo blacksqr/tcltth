@@ -6797,7 +6797,8 @@ esac
 #-----------------------------------------------------------------------
 
 
-    vars="tiger.c tigertree.c base32.c tclcmd.c"
+    vars="tiger.c tigertree.c base32.c \
+	tclinit.c tcltth.c"
     for i in $vars; do
 	case $i in
 	    \$*)

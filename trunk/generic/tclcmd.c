@@ -167,6 +167,75 @@ TTH_DeleteContext (
 
 
 /*
+ *
+ */
+typedef enum {
+	DM_CONTEXT,   /* -context, default */
+	DM_STRING,    /* -string */
+	DM_CHAN       /* -chan */
+} DIGEST_MODE;
+
+typedef enum {
+	DO_BASE32,     /* -base32 or -ttx, default  */
+	DO_RAW         /* -raw */
+} DIGEST_OUTPUT;
+
+
+/*
+ *
+ */
+static int
+Cmd_ParseDigestOptions (
+		Tcl_Interp    *interp,
+		Tcl_Obj       *objv[],
+		int           objc,
+		DIGEST_MODE   *modePtr,
+		DIGEST_OUTPUT *outputPtr
+		)
+{
+	int i, op;
+
+	static const char *options[] = { "-context", "-string", "-chan",
+		"-base32", "-ttx", "-raw", NULL };
+	typedef enum { OP_CONTEXT, OP_STRING, OP_CHAN,
+		OP_BASE32, OP_TTX, OP_RAW } OPTION;
+
+	/* Options start from index 2 and the last object is always a "value": */
+	const int first = 2;
+	int       last  = objc - 2;
+
+	/* Defaults */
+	*modePtr   = DM_CONTEXT;
+	*outputPtr = DO_BASE32;
+
+	for (i = first; i <= last; ++i) {
+		if (Tcl_GetIndexFromObj(interp, objv[i], options, "option",
+				0, &op) != TCL_OK) { return TCL_ERROR; }
+		switch (op) {
+			case OP_CONTEXT:
+				*modePtr = DM_CONTEXT;
+			break;
+			case OP_STRING:
+				*modePtr = DM_STRING;
+			break;
+			case OP_CHAN:
+				*modePtr = DM_CHAN;
+			break;
+			case OP_BASE32:
+			case OP_TTX:
+				*outputPtr = DO_BASE32;
+			break;
+			case OP_RAW:
+				*outputPtr = DO_RAW;
+			break;
+		}
+	}
+
+	return TCL_OK;
+}
+
+
+/*
  *----------------------------------------------------------------------
  *
  * TTH_Cmd --
@@ -196,6 +265,8 @@ TTH_Cmd(
 	int i;
 	TTH_State *statePtr;
 	Tcl_Obj *resultPtr;
+	DIGEST_MODE   dmode;
+	DIGEST_OUTPUT dout;
 
 	if (objc == 1) {
 		Tcl_SetResult(interp, "\
@@ -225,7 +296,7 @@ where options are: -base32|-hex, -le|-be|-ref",
 			}
 			resultPtr = Tcl_GetObjResult(interp);
 			if (Tcl_IsShared(resultPtr)) {
-				resultPtr = Tcl_DuplicateObj(resultPtr);
+				resultPtr = Tcl_NewObj();
 			}
 			TTH_CreateContext(statePtr, resultPtr);
 			Tcl_SetObjResult(interp, resultPtr);
@@ -246,21 +317,28 @@ where options are: -base32|-hex, -le|-be|-ref",
 		break;
 
 		case TTH_DIGEST:
-			if (objc != 3) {
+			if (objc < 3) {
 				Tcl_WrongNumArgs(interp, 2, objv,
-						"tthContext");
+						"?options? source");
 				return TCL_ERROR;
 			}
+			if (Cmd_ParseDigestOptions(interp, objv, objc,
+						&dmode, &dout) != TCL_OK) { return TCL_ERROR; }
 			/* TODO check whether the given context exists.
 			 * May be do so inside TTH_UpdateContext */
 			resultPtr = Tcl_GetObjResult(interp);
 			if (Tcl_IsShared(resultPtr)) {
-				resultPtr = Tcl_DuplicateObj(resultPtr);
+				resultPtr = Tcl_NewObj();
 			}
+			/*
 			TTH_GetDigest(statePtr, objv[2], resultPtr);
+			*/
+			Tcl_SetIntObj(resultPtr, (dmode << 4 | dout) & 0xFF);
 			Tcl_SetObjResult(interp, resultPtr);
+			/*
 			TTH_DeleteContext(TTH_FindContext(
 						statePtr, objv[2]));
+			*/
 			return TCL_OK;
 		break;
 	}

@@ -2,4 +2,8 @@
 # Tcl package index file
 #
 package ifneeded tcltth 0.1 \
-    [list load [file join $dir tcltth01.dll] tcltth]
+		[string map [list \$dir $dir] {
+    load [file join $dir libtcltth0.1.so] tcltth
+	namespace eval ::tth { namespace export tth }
+}]
+

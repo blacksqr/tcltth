@@ -2,4 +2,8 @@
 # Tcl package index file
 #
 package ifneeded @PACKAGE_NAME@ @PACKAGE_VERSION@ \
-    [list load [file join $dir @PKG_LIB_FILE@] @PACKAGE_NAME@]
+		[string map [list \$dir $dir] {
+    load [file join $dir @PKG_LIB_FILE@] @PACKAGE_NAME@
+	namespace eval ::tth { namespace export tth }
+}]
+

@@ -105,31 +105,6 @@ TTH_FindContext (
  *
  */
 void
-TTH_GetDigest (
-		TTH_State *statePtr,
-		Tcl_Obj   *tokenPtr,
-		Tcl_Obj   *digestPtr
-		)
-{
-	Tcl_HashEntry *entryPtr;
-	TT_CONTEXT *contextPtr;
-	char digest[TIGERSIZE];
-	char TTX[BASE32_DESTLEN(TIGERSIZE)];
-
-	entryPtr = TTH_FindContext(statePtr, tokenPtr);
-	contextPtr = (TT_CONTEXT *) Tcl_GetHashValue(entryPtr);
-
-	tt_digest(contextPtr, digest);
-	to_base32(digest, TIGERSIZE, TTX);
-
-	Tcl_SetStringObj(digestPtr, TTX, -1);
-}
-
-
-/*
- *
- */
-void
 TTH_UpdateContext (
 		TTH_State *statePtr,
 		Tcl_Obj   *tokenPtr,
@@ -163,6 +138,88 @@ TTH_DeleteContext (
 	ckfree((char *) contextPtr);
 
 	Tcl_DeleteHashEntry(entryPtr);
+}
+
+
+/*
+ *
+ */
+static int
+TTH_GetDigestFromContext (
+		Tcl_Interp   *interp,
+		TTH_State    *statePtr,
+		Tcl_Obj      *tokenPtr,
+		byte         digest[]
+		)
+{
+	Tcl_HashEntry *entryPtr;
+	TT_CONTEXT *contextPtr;
+	char error[256];
+
+	entryPtr = TTH_FindContext(statePtr, tokenPtr);
+	if (entryPtr == NULL) {
+		Tcl_ResetResult(interp);
+		sprintf(error, "can not find context named \"%s\"",
+				Tcl_GetString(tokenPtr));
+		Tcl_SetResult(interp, error, TCL_VOLATILE);
+		return TCL_ERROR;
+	}
+
+	contextPtr = (TT_CONTEXT *) Tcl_GetHashValue(entryPtr);
+	tt_digest(contextPtr, digest);
+
+	TTH_DeleteContext(entryPtr);
+
+	return TCL_OK;
+}
+
+
+/*
+ *
+ */
+static void
+TTH_GetDigestFromString (
+		Tcl_Obj *dataPtr,
+		byte    digest[]
+		)
+{
+	unsigned char *bytesPtr;
+	int len;
+
+	bytesPtr = Tcl_GetByteArrayFromObj(dataPtr, &len);
+	tiger((word64 *) bytesPtr, (word64) len, (word64 *) digest);
+}
+
+
+/*
+ *
+ */
+static void
+TTH_DigestToBase32 (
+		byte    digest[],
+		Tcl_Obj *resultPtr
+		)
+{
+	char TTX[BASE32_DESTLEN(TIGERSIZE)];
+
+	to_base32(digest, TIGERSIZE, TTX);
+	Tcl_SetStringObj(resultPtr, TTX, -1);
+}
+
+
+/*
+ *
+ */
+static void
+TTH_DigestToRaw (
+		byte    digest[],
+		Tcl_Obj *resultPtr
+		)
+{
+	unsigned char *bytesPtr;
+
+	bytesPtr = Tcl_SetByteArrayLength(resultPtr, TIGERSIZE);
+	memcpy(bytesPtr, digest, TIGERSIZE);
 }
 
 
@@ -264,9 +321,10 @@ TTH_Cmd(
 	typedef enum { TTH_INIT, TTH_UPDATE, TTH_DIGEST } TTH_Option;
 	int i;
 	TTH_State *statePtr;
-	Tcl_Obj *resultPtr;
+	Tcl_Obj *dataPtr, *resultPtr;
 	DIGEST_MODE   dmode;
 	DIGEST_OUTPUT dout;
+	byte digest[TIGERSIZE];
 
 	if (objc == 1) {
 		Tcl_SetResult(interp, "\
@@ -324,21 +382,34 @@ where options are: -base32|-hex, -le|-be|-ref",
 			}
 			if (Cmd_ParseDigestOptions(interp, objv, objc,
 						&dmode, &dout) != TCL_OK) { return TCL_ERROR; }
-			/* TODO check whether the given context exists.
-			 * May be do so inside TTH_UpdateContext */
+			dataPtr = objv[objc - 1];
+			switch (dmode) {
+				case DM_CONTEXT:
+					if (TTH_GetDigestFromContext(interp, statePtr, dataPtr,
+								digest) != TCL_OK) { return TCL_ERROR; }
+				break;
+				case DM_STRING:
+					TTH_GetDigestFromString(dataPtr, digest);
+				break;
+				case DM_CHAN:
+					Tcl_SetResult(interp, "not implemented", TCL_VOLATILE);
+					return TCL_ERROR;
+				break;
+			}
 			resultPtr = Tcl_GetObjResult(interp);
 			if (Tcl_IsShared(resultPtr)) {
 				resultPtr = Tcl_NewObj();
 			}
-			/*
-			TTH_GetDigest(statePtr, objv[2], resultPtr);
-			*/
-			Tcl_SetIntObj(resultPtr, (dmode << 4 | dout) & 0xFF);
+			switch (dout) {
+				case DO_BASE32:
+					TTH_DigestToBase32(digest, resultPtr);
+				break;
+				case DO_RAW:
+					TTH_DigestToRaw(digest, resultPtr);
+				break;
+			}
+			/* Tcl_SetIntObj(resultPtr, (dmode << 4 | dout) & 0xFF); */
 			Tcl_SetObjResult(interp, resultPtr);
-			/*
-			TTH_DeleteContext(TTH_FindContext(
-						statePtr, objv[2]));
-			*/
 			return TCL_OK;
 		break;
 	}

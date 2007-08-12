@@ -19,33 +19,34 @@
 #include "tcltth.h"
 #include "tcltiger.h"
 
-#ifdef BUILD_tcltth
+#ifdef BUILD_tth
 #undef TCL_STORAGE_CLASS
 #define TCL_STORAGE_CLASS DLLEXPORT
-#endif /* BUILD_tcltth */
+#endif /* BUILD_tth */
 
-EXTERN int	Tcltth_Init(Tcl_Interp * interp);
+EXTERN int	Tth_Init(Tcl_Interp * interp);
 
 
 /*
  *----------------------------------------------------------------------
  *
- * Tcltth_Init --
+ * Tth_Init --
  *
- *	Initializes package "tcltth".
+ *	Initializes package "tth".
  *
  * Results:
  *	A standard Tcl result
  *
  * Side effects:
- *	The "tcltth" package is created.
- *	One new command "::tth::tth" is added to the Tcl interpreter.
+ *	- The "tth" package is created.
+ *  - Namespace "::tth" is created.
+ *  - "tiger" and "tth" commands are created in that namespace.
  *
  *----------------------------------------------------------------------
  */
 
 int
-Tcltth_Init(Tcl_Interp *interp)
+Tth_Init(Tcl_Interp *interp)
 {
 	/*
 	 * This may work with 8.0, but we are using strictly stubs here,

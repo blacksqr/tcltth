@@ -2,19 +2,19 @@ $Id$
 
 HIGH:
 
-* Check the context name for existense in [tth update].
-
-* Implement -chan for [tth].
-
-* Implement -hex for [tth].
+* Move base32 impl. directly to DigestToBase32().
 
 * Check how -base32 and -raw work for [tiger].
 
 * Write tests to test -raw output of [tth] and [tiger].
 
+* Write THEX tests for -string and -context forms of [tth].
+
 LOW:
 
-* Move base32 impl. directly to DigestToBase32().
+* Implement -192, -160 & -124 options for output format.
+
+* More comments in source code.
 
 * Write more tests, also for syntax issues after the implementation
   is complete and interfaces are stable.
@@ -22,4 +22,15 @@ LOW:
 * Write a script to convert NESSIE testvectors to tcltest tests
   and run the implementation through them.
   Handcrafting of the test suite is also plausible.
+
+* Check whether we can get rid of the word64 type in the tiger.c
+  (and tigertree.c) since at least the first seem to operate
+  on bytes, not wide ints.
+
+* Study the possibility of implementing mmap()'ped reading
+  of file (via -mmap option to [tth]): look for Metakit.
+  cons: no Tcl-way cross-platform solution; code will almost
+        certainly differ for POSIX and Windows.
+  pros: potentially faster than Tcl channels + no problems
+        with ensuring the channel is binary and readable.
 

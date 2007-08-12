@@ -7,7 +7,7 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
     namespace import ::tcltest::*
 }
 
-package require tcltth
+package require tth
 namespace import ::tth::*
 
 test tth-1.1 {generation of unique TTH context tags} -body {
@@ -22,13 +22,11 @@ test tth-1.2 {TTH contexts are independent} -body {
 	string equal [tth digest $ctx1] [tth digest $ctx2]
 } -result 0
 
-if 0 {
 test tth-1.3 {update for invalid context should fail} -body {
+	tth update non_existent foobar
 } -returnCodes error -result {can not find context named "non_existent"}
-}
 
 test tth-1.4 {digest for invalid context should fail} -body {
-	set ctx [tth init]
 	tth digest -context non_existent
 } -returnCodes error -result {can not find context named "non_existent"}
 
@@ -55,11 +53,71 @@ test tth-3.3 {hex digest of the string "abc"} -body {
 	string toupper [tiger -hex "abc"]
 } -result 2AAB1484E8C158F2BFB8C5FF41B57A525129131C957B5F93
 
-test tth-100.2 {-chan not implemented} -body {
-	set ctx1 [tth init]
-	tth update $ctx1 foo
-	tth digest -chan $ctx1
-} -returnCodes error -result "not implemented"
+test tth-4.1 {digest for non-existent channel must fail} -body {
+	tth digest -chan non_existent
+} -returnCodes error -result {can not find channel named "non_existent"}
+
+test tth-4.2 {digest for unreadable channel must fail} -setup {
+	makeFile {} UNREADABLE
+	set fd [open UNREADABLE w]
+} -cleanup {
+	close $fd
+	removeFile {} UNREADABLE
+} -body {
+	tth digest -chan $fd
+} -returnCodes error -match glob \
+-result {channel "*" is not opened for reading}
+
+# Testvectors from "Tree Hash EXchange format (THEX)" draft:
+
+test tth-5.1 {TTH on zero-length file} -setup {
+	makeFile {} EMPTY
+	set fd [open EMPTY w+]
+} -cleanup {
+	close $fd
+	removeFile {} EMPTY
+} -body {
+	tth digest -chan $fd
+} -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
+
+test tth-5.2 {TTH on a file with one zero byte} -setup {
+	makeFile {} ZERO
+	set fd [open ZERO w+]
+	fconfigure $fd -translation binary
+	puts -nonewline $fd \u0000
+	seek $fd 0
+} -cleanup {
+	close $fd
+	removeFile {} ZERO
+} -body {
+	tth digest -chan $fd
+} -result VK54ZIEEVTWNAUI5D5RDFIL37LX2IQNSTAXFKSA
+
+test tth-5.3 {TTH on a file of 1024 "A" characters} -setup {
+	makeFile {} 1024A
+	set fd [open 1024A w+]
+	fconfigure $fd -translation binary
+	puts -nonewline $fd [string repeat A 1024]
+	seek $fd 0
+} -cleanup {
+	close $fd
+	removeFile {} 1024A
+} -body {
+	tth digest -chan $fd
+} -result L66Q4YVNAFWVS23X2HJIRA5ZJ7WXR3F26RSASFA
+
+test tth-5.4 {TTH on a file of 1025 "A" characters} -setup {
+	makeFile {} 1025A
+	set fd [open 1025A w+]
+	fconfigure $fd -translation binary
+	puts -nonewline $fd [string repeat A 1025]
+	seek $fd 0
+} -cleanup {
+	close $fd
+	removeFile {} 1025A
+} -body {
+	tth digest -chan $fd
+} -result PZMRYHGY6LTBEH63ZWAHDORHSYTLO4LEFUIKHWY
 
 # cleanup
 ::tcltest::cleanupTests

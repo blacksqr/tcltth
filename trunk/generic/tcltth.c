@@ -59,10 +59,9 @@ TTH_CleanupState (
 /*
  *
  */
-static void
+static Tcl_Obj *
 TTH_CreateContext (
-		TTH_State *statePtr,
-		Tcl_Obj   *tokenPtr
+		TTH_State *statePtr
 		)
 {
 	char token[3 + 10 + 1];
@@ -75,51 +74,65 @@ TTH_CreateContext (
 
 	entryPtr = Tcl_CreateHashEntry(&statePtr->contexts, token, &new);
 	if (new != 1) {
-		Tcl_Panic("TTH context \"%s\" stomped on existing one", token);
+		Tcl_Panic("TTH context \"%s\" stomps on existing one", token);
 	}
 
 	contextPtr = (TT_CONTEXT *) ckalloc(sizeof(TT_CONTEXT));
 	Tcl_SetHashValue(entryPtr, (ClientData)contextPtr);
 	tt_init(contextPtr);
 
-	Tcl_SetStringObj(tokenPtr, token, -1);
+	return Tcl_NewStringObj(token, -1);
 }
 
 
 /*
  *
  */
-static Tcl_HashEntry *
+static int
 TTH_FindContext (
-		TTH_State *statePtr,
-		Tcl_Obj   *tokenPtr
+		Tcl_Interp    *interp,
+		TTH_State     *statePtr,
+		Tcl_Obj       *tokenPtr,
+		Tcl_HashEntry **entryPtr
 		)
 {
-	return Tcl_FindHashEntry(&statePtr->contexts,
+	*entryPtr = Tcl_FindHashEntry(&statePtr->contexts,
 			Tcl_GetString(tokenPtr));
+	if (*entryPtr == NULL) {
+		Tcl_ResetResult(interp);
+		Tcl_AppendResult(interp, "can not find context named \"",
+				Tcl_GetString(tokenPtr), "\"", NULL);
+		return TCL_ERROR;
+	} else
+		return TCL_OK;
 }
 
 
 /*
  *
  */
-static void
+static int
 TTH_UpdateContext (
-		TTH_State *statePtr,
-		Tcl_Obj   *tokenPtr,
-		Tcl_Obj   *dataPtr 
+		Tcl_Interp *interp,
+		TTH_State  *statePtr,
+		Tcl_Obj    *tokenPtr,
+		Tcl_Obj    *dataPtr 
 		)
 {
 	Tcl_HashEntry *entryPtr;
 	TT_CONTEXT    *contextPtr;
-	CONST char    *bytesPtr;
+	byte          *bytesPtr;
 	int           len;
 
-	entryPtr = TTH_FindContext(statePtr, tokenPtr);
+	if(TTH_FindContext(interp, statePtr, tokenPtr,
+				&entryPtr) != TCL_OK) { return TCL_ERROR; }
+
 	contextPtr = (TT_CONTEXT *) Tcl_GetHashValue(entryPtr);
 
 	bytesPtr = Tcl_GetByteArrayFromObj(dataPtr, &len);
 	tt_update(contextPtr, bytesPtr, len);
+
+	return TCL_OK;
 }
 
 
@@ -139,38 +152,6 @@ TTH_DeleteContext (
 	Tcl_DeleteHashEntry(entryPtr);
 }
 
-
-/*
- *
- */
-static int
-TTH_GetDigestFromContext (
-		Tcl_Interp   *interp,
-		TTH_State    *statePtr,
-		Tcl_Obj      *tokenPtr,
-		byte         digest[]
-		)
-{
-	Tcl_HashEntry *entryPtr;
-	TT_CONTEXT *contextPtr;
-	char error[256];
-
-	entryPtr = TTH_FindContext(statePtr, tokenPtr);
-	if (entryPtr == NULL) {
-		Tcl_ResetResult(interp);
-		sprintf(error, "can not find context named \"%s\"",
-				Tcl_GetString(tokenPtr));
-		Tcl_SetResult(interp, error, TCL_VOLATILE);
-		return TCL_ERROR;
-	}
-
-	contextPtr = (TT_CONTEXT *) Tcl_GetHashValue(entryPtr);
-	tt_digest(contextPtr, digest);
-
-	TTH_DeleteContext(entryPtr);
-
-	return TCL_OK;
-}
 
 
 /*
@@ -193,6 +174,90 @@ TTH_GetDigestFromString (
 /*
  *
  */
+static int
+TTH_GetDigestFromContext (
+		Tcl_Interp   *interp,
+		TTH_State    *statePtr,
+		Tcl_Obj      *tokenPtr,
+		byte         digest[]
+		)
+{
+	Tcl_HashEntry *entryPtr;
+	TT_CONTEXT *contextPtr;
+
+	if (TTH_FindContext(interp, statePtr, tokenPtr,
+				&entryPtr) != TCL_OK) { return TCL_ERROR; }
+
+	contextPtr = (TT_CONTEXT *) Tcl_GetHashValue(entryPtr);
+	tt_digest(contextPtr, digest);
+
+	TTH_DeleteContext(entryPtr);
+
+	return TCL_OK;
+}
+
+
+/*
+ *
+ */
+static int
+TTH_GetDigestFromChan (
+		Tcl_Interp   *interp,
+		Tcl_Obj      *chanPtr,
+		byte         digest[]
+		)
+{
+	Tcl_Channel chan;
+	int mode;
+	TT_CONTEXT context;
+	Tcl_Obj *chunkPtr;
+	byte *dataPtr;
+	int len;
+	const int CHUNKSIZE = 8192;
+
+	chan = Tcl_GetChannel(interp,
+			Tcl_GetString(chanPtr), &mode);
+	if (chan == NULL) {
+		Tcl_ResetResult(interp);
+		Tcl_AppendResult(interp, "can not find channel named \"",
+				Tcl_GetString(chanPtr), "\"", NULL);
+		return TCL_ERROR;
+	}
+	if ((mode & TCL_READABLE) != TCL_READABLE) {
+		Tcl_ResetResult(interp);
+		Tcl_AppendResult(interp, "channel \"", Tcl_GetString(chanPtr),
+				"\" is not opened for reading", NULL);
+		return TCL_ERROR;
+	}
+
+	tt_init(&context);
+
+	chunkPtr = Tcl_NewObj();
+	Tcl_IncrRefCount(chunkPtr);
+
+	while (! Tcl_Eof(chan)) {
+		len = Tcl_ReadChars(chan, chunkPtr, CHUNKSIZE, 0);
+		if (len == -1) {
+			Tcl_ResetResult(interp);
+			Tcl_AppendResult(interp, "failed to read from channel \"",
+					Tcl_GetString(chanPtr), "\"", NULL);
+			return TCL_ERROR;
+		}
+		dataPtr = Tcl_GetByteArrayFromObj(chunkPtr, &len);
+		tt_update(&context, dataPtr, len);
+	}
+
+	tt_digest(&context, digest);
+
+	Tcl_DecrRefCount(chunkPtr);
+
+	return TCL_OK;
+}
+
+
+/*
+ *
+ */
 typedef enum {
 	DM_CONTEXT,   /* -context, default */
 	DM_STRING,    /* -string */
@@ -201,6 +266,7 @@ typedef enum {
 
 typedef enum {
 	DO_BASE32,     /* -base32 or -ttx, default  */
+	DO_HEX,        /* -hex */
 	DO_RAW         /* -raw */
 } DIGEST_OUTPUT;
 
@@ -210,19 +276,19 @@ typedef enum {
  */
 static int
 Cmd_ParseDigestOptions (
-		Tcl_Interp    *interp,
-		Tcl_Obj       *objv[],
-		int           objc,
-		DIGEST_MODE   *modePtr,
-		DIGEST_OUTPUT *outputPtr
+		Tcl_Interp     *interp,
+		Tcl_Obj *const objv[],
+		int            objc,
+		DIGEST_MODE    *modePtr,
+		DIGEST_OUTPUT  *outputPtr
 		)
 {
 	int i, op;
 
 	static const char *options[] = { "-context", "-string", "-chan",
-		"-base32", "-ttx", "-raw", NULL };
+		"-base32", "-ttx", "-hex", "-raw", NULL };
 	typedef enum { OP_CONTEXT, OP_STRING, OP_CHAN,
-		OP_BASE32, OP_TTX, OP_RAW } OPTION;
+		OP_BASE32, OP_TTX, OP_HEX, OP_RAW } OPTION;
 
 	/* Options start from index 2 and the last object is always a "value": */
 	const int first = 2;
@@ -248,6 +314,9 @@ Cmd_ParseDigestOptions (
 			case OP_BASE32:
 			case OP_TTX:
 				*outputPtr = DO_BASE32;
+			break;
+			case OP_HEX:
+				*outputPtr = DO_HEX;
 			break;
 			case OP_RAW:
 				*outputPtr = DO_RAW;
@@ -288,23 +357,14 @@ TTH_Cmd(
 	typedef enum { TTH_INIT, TTH_UPDATE, TTH_DIGEST } TTH_Option;
 	int i;
 	TTH_State *statePtr;
-	Tcl_Obj *dataPtr, *resultPtr;
+	Tcl_Obj *dataPtr;
 	DIGEST_MODE   dmode;
 	DIGEST_OUTPUT dout;
 	byte digest[TIGERSIZE];
 
 	if (objc == 1) {
-		Tcl_SetResult(interp, "\
-wrong # args: should be one of:\n\
-tth init\n\
-or\n\
-tth update tthContext sourceString\n\
-or\n\
-tth digest ?options? tthContext\n\
-tth digest ?options? -string sourceString\n\
-tth digest ?options? -chan fileChannel\n\
-where options are: -base32|-hex, -le|-be|-ref",
-				TCL_VOLATILE);
+		Tcl_WrongNumArgs(interp, 1, objv,
+				"option ?arg ...?");
 		return TCL_ERROR;
 	}
 
@@ -319,12 +379,7 @@ where options are: -base32|-hex, -le|-be|-ref",
 				Tcl_WrongNumArgs(interp, 2, objv, NULL);
 				return TCL_ERROR;
 			}
-			resultPtr = Tcl_GetObjResult(interp);
-			if (Tcl_IsShared(resultPtr)) {
-				resultPtr = Tcl_NewObj();
-			}
-			TTH_CreateContext(statePtr, resultPtr);
-			Tcl_SetObjResult(interp, resultPtr);
+			Tcl_SetObjResult(interp, TTH_CreateContext(statePtr));
 			return TCL_OK;
 		break;
 
@@ -334,9 +389,8 @@ where options are: -base32|-hex, -le|-be|-ref",
 						"tthContext sourceString");
 				return TCL_ERROR;
 			}
-			/* TODO check whether the given context exists.
-			 * May be do so inside TTH_UpdateContext */
-			TTH_UpdateContext(statePtr, objv[2], objv[3]);
+			if (TTH_UpdateContext(interp, statePtr, objv[2],
+						objv[3]) != TCL_OK) { return TCL_ERROR; }
 			Tcl_ResetResult(interp);
 			return TCL_OK;
 		break;
@@ -359,22 +413,23 @@ where options are: -base32|-hex, -le|-be|-ref",
 					TTH_GetDigestFromString(dataPtr, digest);
 				break;
 				case DM_CHAN:
-					Tcl_SetResult(interp, "not implemented", TCL_VOLATILE);
-					return TCL_ERROR;
+					if (TTH_GetDigestFromChan(interp, dataPtr,
+								digest) != TCL_OK) { return TCL_ERROR; }
+					/* Tcl_SetResult(interp, "not implemented", TCL_VOLATILE); */
 				break;
-			}
-			resultPtr = Tcl_GetObjResult(interp);
-			if (Tcl_IsShared(resultPtr)) {
-				resultPtr = Tcl_NewObj();
 			}
 			switch (dout) {
 				case DO_BASE32:
 					Tcl_SetObjResult(interp,
-						DigestToBase32(digest));
+							DigestToBase32(digest));
+				break;
+				case DO_HEX:
+					Tcl_SetObjResult(interp,
+							DigestToHex(digest));
 				break;
 				case DO_RAW:
 					Tcl_SetObjResult(interp,
-						DigestToRaw(digest));
+							DigestToRaw(digest));
 				break;
 			}
 			return TCL_OK;

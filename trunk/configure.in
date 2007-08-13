@@ -65,7 +65,15 @@ TEA_SETUP_COMPILER
 # This defines macro WORDS_BIGENDIAN
 # in case the platform has big-endian words (like Motorola or SPARC).
 #-----------------------------------------------------------------------
+
 AC_C_BIGENDIAN
+
+#-----------------------------------------------------------------------
+# This defines macro HAVE_MMAP
+# in case the system supports mmap()
+#-----------------------------------------------------------------------
+
+AC_FUNC_MMAP
 
 #-----------------------------------------------------------------------
 # __CHANGE__

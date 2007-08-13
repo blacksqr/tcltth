@@ -10,6 +10,8 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
 package require tth
 namespace import ::tth::*
 
+# Syntax things:
+
 test tth-1.1 {generation of unique TTH context tags} -body {
 	string equal [tth init] [tth init]
 } -result 0
@@ -41,17 +43,57 @@ test tth-2.2 {context-based of empty message, several updates} -body {
 	tth digest $ctx
 } -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
 
-test tth-3.1 {hex digest of an empty string} -body {
+# NESSIE testvectors, set 1
+# (from http://www.cs.technion.ac.il/~biham/Reports/Tiger/test-vectors-nessie-format.dat)
+# tiger, -hex
+
+test tiger-hex-1.1 {hex digest of an empty string} -body {
 	string toupper [tiger -hex ""]
 } -result 3293AC630C13F0245F92BBB1766E16167A4E58492DDE73F3
 
-test tth-3.2 {hex digest of the string "a"} -body {
+test tiger-hex-1.2 {hex digest of the string "a"} -body {
 	string toupper [tiger -hex "a"]
 } -result 77BEFBEF2E7EF8AB2EC8F93BF587A7FC613E247F5F247809
 
-test tth-3.3 {hex digest of the string "abc"} -body {
+test tiger-hex-1.3 {hex digest of the string "abc"} -body {
 	string toupper [tiger -hex "abc"]
 } -result 2AAB1484E8C158F2BFB8C5FF41B57A525129131C957B5F93
+
+test tiger-hex-1.4 {hex digest of the string "message digest"} -body {
+	string toupper [tiger -hex "message digest"]
+} -result D981F8CB78201A950DCF3048751E441C517FCA1AA55A29F6
+
+test tiger-hex-1.5 {hex digest of the string "abcdefghijklmnopqrstuvwxyz"} -body {
+	string toupper [tiger -hex "abcdefghijklmnopqrstuvwxyz"]
+} -result 1714A472EEE57D30040412BFCC55032A0B11602FF37BEEE9
+
+test tiger-hex-1.6 {hex digest of another beautiful string} -body {
+	string toupper [tiger -hex "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"]
+} -result 0F7BF9A19B9C58F2B7610DF7E84F0AC3A71C631E7B53F78E
+
+test tiger-hex-1.7 {hex digest of the string "A...Za...z0...9"} -body {
+	set s ""
+	for {set i [scan A %c]} "\$i <= [scan Z %c]" {incr i} {
+		append s [format %c $i]
+	}
+	for {set i [scan a %c]} "\$i <= [scan z %c]" {incr i} {
+		append s [format %c $i]
+	}
+	for {set i [scan 0 %c]} "\$i <= [scan 9 %c]" {incr i} {
+		append s [format %c $i]
+	}
+	string toupper [tiger -hex $s]
+} -result 8DCEA680A17583EE502BA38A3C368651890FFBCCDC49A8CC
+
+test tiger-hex-1.8 {hex digest of the 8 times "1234567890"} -body {
+	string toupper [tiger -hex [string repeat 1234567890 8]]
+} -result 1C14795529FD9F207A958F84C52F11E887FA0CABDFD91BFD
+
+test tiger-hex-1.9 {hex digest of 1 million times "a"} -body {
+	string toupper [tiger -hex [string repeat a 1000000]]
+} -result 6DB0E2729CBEAD93D715C6A7D36302E9B3CEE0D2BC314B41
+
+# tth -chan safety checks:
 
 test tth-4.1 {digest for non-existent channel must fail} -body {
 	tth digest -chan non_existent
@@ -68,9 +110,10 @@ test tth-4.2 {digest for unreadable channel must fail} -setup {
 } -returnCodes error -match glob \
 -result {channel "*" is not opened for reading}
 
+# -chan + -base32/-ttx
 # Testvectors from "Tree Hash EXchange format (THEX)" draft:
 
-test tth-5.1 {TTH on zero-length file} -setup {
+test tth-chan-ttx-1.1 {TTH on zero-length file using -chan} -setup {
 	makeFile {} EMPTY
 	set fd [open EMPTY w+]
 } -cleanup {
@@ -80,7 +123,7 @@ test tth-5.1 {TTH on zero-length file} -setup {
 	tth digest -chan $fd
 } -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
 
-test tth-5.2 {TTH on a file with one zero byte} -setup {
+test tth-chan-ttx-1.2 {TTH on a file with one zero byte using -chan} -setup {
 	makeFile {} ZERO
 	set fd [open ZERO w+]
 	fconfigure $fd -translation binary
@@ -93,7 +136,7 @@ test tth-5.2 {TTH on a file with one zero byte} -setup {
 	tth digest -chan $fd
 } -result VK54ZIEEVTWNAUI5D5RDFIL37LX2IQNSTAXFKSA
 
-test tth-5.3 {TTH on a file of 1024 "A" characters} -setup {
+test tth-chan-ttx-1.3 {TTH on a file of 1024 "A" characters using -chan} -setup {
 	makeFile {} 1024A
 	set fd [open 1024A w+]
 	fconfigure $fd -translation binary
@@ -106,7 +149,7 @@ test tth-5.3 {TTH on a file of 1024 "A" characters} -setup {
 	tth digest -chan $fd
 } -result L66Q4YVNAFWVS23X2HJIRA5ZJ7WXR3F26RSASFA
 
-test tth-5.4 {TTH on a file of 1025 "A" characters} -setup {
+test tth-chan-ttx-1.4 {TTH on a file of 1025 "A" characters using -chan} -setup {
 	makeFile {} 1025A
 	set fd [open 1025A w+]
 	fconfigure $fd -translation binary
@@ -117,6 +160,55 @@ test tth-5.4 {TTH on a file of 1025 "A" characters} -setup {
 	removeFile {} 1025A
 } -body {
 	tth digest -chan $fd
+} -result PZMRYHGY6LTBEH63ZWAHDORHSYTLO4LEFUIKHWY
+
+# -mmap + -base32/-ttx
+# Testvectors from "Tree Hash EXchange format (THEX)" draft:
+
+test tth-mmap-ttx-1.1 {TTH on zero-length file using -mmap} -setup {
+	makeFile {} EMPTY
+	set fd [open EMPTY w+] ;# truncate file
+	close $fd
+} -cleanup {
+	removeFile {} EMPTY
+} -body {
+	tth digest -mmap EMPTY
+} -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
+
+test tth-mmap-ttx-1.2 {TTH on a file with one zero byte using -mmap} -setup {
+	makeFile {} ZERO
+	set fd [open ZERO w+]
+	fconfigure $fd -translation binary
+	puts -nonewline $fd \u0000
+	close $fd
+} -cleanup {
+	removeFile {} ZERO
+} -body {
+	tth digest -mmap ZERO
+} -result VK54ZIEEVTWNAUI5D5RDFIL37LX2IQNSTAXFKSA
+
+test tth-mmap-ttx-1.3 {TTH on a file of 1024 "A" characters using -mmap} -setup {
+	makeFile {} 1024A
+	set fd [open 1024A w+]
+	fconfigure $fd -translation binary
+	puts -nonewline $fd [string repeat A 1024]
+	close $fd
+} -cleanup {
+	removeFile {} 1024A
+} -body {
+	tth digest -mmap 1024A
+} -result L66Q4YVNAFWVS23X2HJIRA5ZJ7WXR3F26RSASFA
+
+test tth-mmap-ttx-1.4 {TTH on a file of 1025 "A" characters using -mmap} -setup {
+	makeFile {} 1025A
+	set fd [open 1025A w+]
+	fconfigure $fd -translation binary
+	puts -nonewline $fd [string repeat A 1025]
+	close $fd
+} -cleanup {
+	removeFile {} 1025A
+} -body {
+	tth digest -mmap 1025A
 } -result PZMRYHGY6LTBEH63ZWAHDORHSYTLO4LEFUIKHWY
 
 # cleanup

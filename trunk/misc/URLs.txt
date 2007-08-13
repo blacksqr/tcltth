@@ -1,2 +1,6 @@
 Another free software C implementation incl. TTH on files:
 http://rehash.sourceforge.net/
+
+NESSIE test vectors:
+http://www.cs.technion.ac.il/~biham/Reports/Tiger/test-vectors-nessie-format.dat
+

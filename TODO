@@ -2,6 +2,9 @@ $Id$
 
 HIGH:
 
+* Try to implement mmapping on win32:
+  CreateFileMapping, MapViewOfFile and UnmapViewOfFile.
+
 * Move base32 impl. directly to DigestToBase32().
 
 * Check how -base32 and -raw work for [tiger].

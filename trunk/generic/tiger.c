@@ -202,3 +202,37 @@ void tiger(word64 *str, word64 length, word64 res[3])
   tiger_compress(((word64*)temp), res);
 }
 
+/* Implementation copied without change from the
+ * original tigertree.c where it was called
+ * tt_endian().
+ */
+#ifdef BIG_ENDIAN
+void tiger_to_canonical(byte *s)
+{
+  word64 *i;
+  byte   *b, btemp;
+  word16 *w, wtemp;
+
+  for(w = (word16 *)s; w < ((word16 *)s) + 12; w++)
+  {
+      b = (byte *)w;
+      btemp = *b;
+      *b = *(b + 1);
+      *(b + 1) = btemp;
+  }
+
+  for(i = (word64 *)s; i < ((word64 *)s) + 3; i++)
+  {
+      w = (word16 *)i;
+
+      wtemp = *w;
+      *w = *(w + 3);
+      *(w + 3) = wtemp;
+
+      wtemp = *(w + 1);
+      *(w + 1) = *(w + 2);
+      *(w + 2) = wtemp;
+  }
+}
+#endif /* ifdef BIG_ENDIAN */
+

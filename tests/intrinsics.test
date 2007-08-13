@@ -43,9 +43,9 @@ test tth-2.2 {context-based of empty message, several updates} -body {
 	tth digest $ctx
 } -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
 
+# tiger, -hex:
 # NESSIE testvectors, set 1
 # (from http://www.cs.technion.ac.il/~biham/Reports/Tiger/test-vectors-nessie-format.dat)
-# tiger, -hex
 
 test tiger-hex-1.1 {hex digest of an empty string} -body {
 	string toupper [tiger -hex ""]
@@ -93,7 +93,8 @@ test tiger-hex-1.9 {hex digest of 1 million times "a"} -body {
 	string toupper [tiger -hex [string repeat a 1000000]]
 } -result 6DB0E2729CBEAD93D715C6A7D36302E9B3CEE0D2BC314B41
 
-# tth -chan safety checks:
+# tth:
+# -chan safety checks:
 
 test tth-4.1 {digest for non-existent channel must fail} -body {
 	tth digest -chan non_existent
@@ -110,8 +111,30 @@ test tth-4.2 {digest for unreadable channel must fail} -setup {
 } -returnCodes error -match glob \
 -result {channel "*" is not opened for reading}
 
+# tth:
+# -string + -ttx
+# Testvectors from "Tree Hash EXchange format (THEX)" draft
+# http://open-content.net/specs/draft-jchapweske-thex-02.html
+
+test tth-string-ttx-1.1 {TTH on empty string using -string} -body {
+	tth digest -string ""
+} -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
+
+test tth-string-ttx-1.2 {TTH on a string containing one zero byte} -body {
+	tth digest -string [binary format c 0]
+} -result VK54ZIEEVTWNAUI5D5RDFIL37LX2IQNSTAXFKSA
+
+test tth-string-ttx-1.3 {TTH on a string of 1024 "A" characters} -body {
+	tth digest -string [string repeat A 1024]
+} -result L66Q4YVNAFWVS23X2HJIRA5ZJ7WXR3F26RSASFA
+
+test tth-string-ttx-1.4 {TTH on a string of 1025 "A" characters} -body {
+	tth digest -string [string repeat A 1025]
+} -result PZMRYHGY6LTBEH63ZWAHDORHSYTLO4LEFUIKHWY
+
 # -chan + -base32/-ttx
-# Testvectors from "Tree Hash EXchange format (THEX)" draft:
+# Testvectors from "Tree Hash EXchange format (THEX)" draft
+# http://open-content.net/specs/draft-jchapweske-thex-02.html
 
 test tth-chan-ttx-1.1 {TTH on zero-length file using -chan} -setup {
 	makeFile {} EMPTY
@@ -163,7 +186,8 @@ test tth-chan-ttx-1.4 {TTH on a file of 1025 "A" characters using -chan} -setup 
 } -result PZMRYHGY6LTBEH63ZWAHDORHSYTLO4LEFUIKHWY
 
 # -mmap + -base32/-ttx
-# Testvectors from "Tree Hash EXchange format (THEX)" draft:
+# Testvectors from "Tree Hash EXchange format (THEX)" draft
+# http://open-content.net/specs/draft-jchapweske-thex-02.html
 
 test tth-mmap-ttx-1.1 {TTH on zero-length file using -mmap} -setup {
 	makeFile {} EMPTY
@@ -214,3 +238,4 @@ test tth-mmap-ttx-1.4 {TTH on a file of 1025 "A" characters using -mmap} -setup 
 # cleanup
 ::tcltest::cleanupTests
 return
+

@@ -45,13 +45,6 @@
 #include <string.h>
 #include "tigertree.h"
 
-#ifdef WORDS_BIGENDIAN
-#   define USE_BIG_ENDIAN 1
-#else
-#   define USE_BIG_ENDIAN 0
-#endif
-void tt_endian(byte *s);
-
 /* Initialize the tigertree context */
 void tt_init(TT_CONTEXT *ctx)
 {
@@ -67,9 +60,7 @@ static void tt_compose(TT_CONTEXT *ctx) {
   byte *node = ctx->top - NODESIZE;
   memmove((ctx->node)+1,node,NODESIZE); // copy to scratch area
   tiger((word64*)(ctx->node),(word64)(NODESIZE+1),(word64*)(ctx->top)); // combine two nodes
-#if USE_BIG_ENDIAN
-  tt_endian((byte *)ctx->top);
-#endif
+  tiger_to_canonical((byte *)ctx->top);
   memmove(node,ctx->top,TIGERSIZE);           // move up result
   ctx->top -= TIGERSIZE;                      // update top ptr
 }
@@ -79,9 +70,7 @@ static void tt_block(TT_CONTEXT *ctx)
   word64 b;
 
   tiger((word64*)ctx->leaf,(word64)ctx->index+1,(word64*)ctx->top);
-#if USE_BIG_ENDIAN
-  tt_endian((byte *)ctx->top);
-#endif
+  tiger_to_canonical((byte *)ctx->top);
   ctx->top += TIGERSIZE;
   ++ctx->count;
   b = ctx->count;
@@ -146,34 +135,6 @@ void tt_digest(TT_CONTEXT *ctx, byte *s)
   memcpy(s,ctx->nodes,TIGERSIZE);
 }
 
-void tt_endian(byte *s)
-{
-  word64 *i;
-  byte   *b, btemp;
-  word16 *w, wtemp;
-
-  for(w = (word16 *)s; w < ((word16 *)s) + 12; w++)
-  {
-      b = (byte *)w;
-      btemp = *b;
-      *b = *(b + 1);
-      *(b + 1) = btemp;
-  }
-
-  for(i = (word64 *)s; i < ((word64 *)s) + 3; i++)
-  {
-      w = (word16 *)i;
-
-      wtemp = *w;
-      *w = *(w + 3);
-      *(w + 3) = wtemp;
-
-      wtemp = *(w + 1);
-      *(w + 1) = *(w + 2);
-      *(w + 2) = wtemp;
-  }
-}
-
 // this code untested; use at own risk
 void tt_copy(TT_CONTEXT *dest, TT_CONTEXT *src)
 {
@@ -186,3 +147,4 @@ void tt_copy(TT_CONTEXT *dest, TT_CONTEXT *src)
     dest->nodes[i] = src->nodes[i];
   dest->top = src->top;
 }
+

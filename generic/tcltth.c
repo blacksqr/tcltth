@@ -170,11 +170,14 @@ TTH_GetDigestFromString (
 		byte    digest[]
 		)
 {
+	TT_CONTEXT context;
 	unsigned char *bytesPtr;
 	int len;
 
+	tt_init(&context);
 	bytesPtr = Tcl_GetByteArrayFromObj(dataPtr, &len);
-	tiger((word64 *) bytesPtr, (word64) len, (word64 *) digest);
+	tt_update(&context, bytesPtr, len);
+	tt_digest(&context, digest);
 }
 
 
@@ -299,6 +302,8 @@ TTH_GetDigestUsingMmap (
 #error Neither _SC_PAGESIZE nor _SC_PAGE_SIZE is defined
 #endif
 #endif
+
+	/* pagesize *= 1024; */
 
 	if (fstat(fd, &finfo) == -1) {
 		Tcl_ResetResult(interp);

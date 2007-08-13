@@ -49,6 +49,7 @@ Tiger_Cmd(
 
 	dataPtr = Tcl_GetByteArrayFromObj(objv[objc - 1], &len);
 	tiger((word64 *) dataPtr, (word64) len, (word64 *) digest);
+	tiger_to_canonical(digest);
 
 	switch (op) {
 		case TO_BASE32:

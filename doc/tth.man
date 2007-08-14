@@ -1,0 +1,127 @@
+[manpage_begin tth 3tcl 0.1]
+[comment {$Id$}]
+
+[copyright {2007 Konstantin Khomoutov <flatworm@users.sourceforge.net>}]
+[moddesc {Tiger Hash, Tiger Tree Hash, THEX}]
+
+[require Tcl ?8.1?]
+[require tth ?0.1?]
+[usage [cmd tth::tiger] [opt options] [arg bitstring]]
+[usage [cmd tth::tth] [cmd digest] [opt options] [cmd -string] [arg bitstring]]
+[usage [cmd tth::tth] [cmd digest] [opt options] [cmd -chan] [arg channel]]
+[usage [cmd set] tthContext \[[cmd tth::tth] [cmd init]\]]
+[usage [cmd tth::tth] [cmd update] [arg tthContext] [arg bitstring]]
+[usage [cmd tth::tth] [cmd digest] [opt -context] [arg tthContext]]
+
+[description]
+
+This module implements several Tcl commands for calculating
+Tiger Hash (v1) and Tiger Tree Hash (TTH) (with the support for
+Tree Hash Exchange (THEX) output format). The module is written
+in C and provides for various strategies of processing the input data
+as well as several formats for resulting digests.
+
+[para]
+
+In general, this module provides two commands: [cmd tiger] and
+[cmd tth] which are contained in the namespace [namespace ::tth].
+(Both commands can be imported from their namespace.)
+
+[para]
+
+The [cmd tiger] command is able to calculate Tiger Hash (v1) on
+a bitstring. It's inherently limited in its operation since it
+requires all the input data to be passed at once so it can hardly
+be used on huge files, for instance.
+
+[para]
+
+[cmd tiger] supports three standard bit lengths of the resulting
+digest: 192 (the default), 160 and 128 bits. Resulting hash
+can be output as either a "raw" bitstring or a string of
+hexadecimal digits representing bytes of the bitstring.
+
+[para]
+
+The [cmd tth] command is able to calculate Tiger Tree Hash (TTH)
+using the so-called Merkele Hash Tree approach and can be
+used on huge amounts of data. It supports processing of a single
+bitstring (like the [cmd tiger] command), a stream of data from
+an open Tcl channel, or it can operate using "hashing context":
+at first the context is created, then it's updated using
+arbitrary number of data chunks and finally a resulting digest is
+returned.
+
+[para]
+
+[cmd tth] supports the same bit lengths and output formats as
+[cmd tiger] plus one additional format called Tree Hash Exchange
+(or THEX for short). This is essentially a base32 representation
+of the resulting digest with any trailing "=" characters resulting
+from the base32 "padding" removed.
+
+[para]
+
+Tiger Tree hashes in THEX format are used in several peer-to-peer
+file sharing protocols (namely, DirectConnect (also known as NMDC)
+and ADC) to ensure integrity of the transferred files and also
+for identifying several copies of the same file possessed by
+different peers to provide for so-called "multiple segment
+downloading". Implementation of TTH with THEX was the immediate goal
+for creation of this module.
+
+[subsection {Note on output format}]
+
+The Tiger Hash specification defines the result of applying this
+algorithm as three 64-bit (wide) words, and no
+statements are made to postulate the "reference interpretation"
+of these integers in the sense of converting them to the resulting
+bitstring.
+
+[para]
+
+This module uses the format that is known to be the accepted
+practice and is also documented in the official test vectors for
+the Tiger Hash (v1) (provided by the NESSIE project).
+This format defines the resulting bitstring as if the three
+64-bit words of the calculated digest are turned little endian
+and then concatenated left-to-right from the first to the third.
+"Little-endian" in this case means "least significant [emph octet]
+first", not [emph bit.]
+
+[para]
+
+So any command implemented by this package returns an array of
+bytes produced as described above or some of its printable
+representations.
+
+This is made intentionally to make the produced results and
+its interpretation on a script level independent of the
+host platform "endianness".
+
+This means that if you need to get your hands on the original
+three 64-bit words of the resulting digest you have to
+apply something like this to the result of the provided
+commands (assuming they are told to output the "raw" bitstring):
+[comment {example with [binary scan c* $raw_result words] here}]
+
+[subsection {Notes on input format}]
+
+While Tiger Hash is known to operate on bits the Tcl's least
+"addressable" unit is one character (or one octet in the case of
+binary strings which are of most use when representing data
+to be hashed). This is OK for files and other data represented
+in octets but if you need to operate on quantities of bits not
+evenly divisable by 8 you have to "cook" binary strings
+from them.
+
+[para]
+
+TODO: provide more info on constructing binary strings from
+Tcl's "lists of bits" and padding for them.
+
+[section COMMANDS]
+
+[comment {vim:sytnax=tcl:tw=72:noet}]
+[manpage_end]
+

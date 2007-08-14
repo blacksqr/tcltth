@@ -18,19 +18,28 @@
 #include <tcl.h>
 #include "tiger.h"
 
+typedef enum {
+	DL_192 = 192,  /* -192, default */
+	DL_160 = 160,  /* -160 */
+	DL_128 = 128   /* -128 */
+} DIGEST_BITLEN;
+
 Tcl_Obj *
-DigestToBase32 (
-		byte    digest[]
+DigestToTHEX (
+		byte           digest[],
+		DIGEST_BITLEN  bitlen
 		);
 
 Tcl_Obj *
 DigestToRaw (
-		byte    digest[]
+		byte           digest[],
+		DIGEST_BITLEN  bitlen
 		);
 
 Tcl_Obj *
 DigestToHex (
-		byte   digest[]
+		byte           digest[],
+		DIGEST_BITLEN  bitlen
 		);
 
 #endif /* __TCLOUT_H */

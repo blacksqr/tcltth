@@ -23,6 +23,67 @@
 /*
  *
  */
+typedef enum {
+	DO_HEX,      /* -hex, default */
+	DO_RAW       /* -raw */
+} DIGEST_OUTPUT;
+
+
+/*
+ *
+ */
+static int
+Cmd_ParseDigestOptions (
+		Tcl_Interp     *interp,
+		Tcl_Obj *const objv[],
+		int            objc,
+		DIGEST_OUTPUT  *outputPtr,
+		DIGEST_BITLEN  *bitlenPtr
+		)
+{
+	int i, op;
+
+	static const char *options[] = { "-hex", "-raw",
+		"-192", "-160", "-128", NULL };
+	typedef enum { OP_HEX, OP_RAW, OP_192, OP_160, OP_128 } OPTION;
+
+	/* Options start from index 1 and the last object is always a "value": */
+	const int first = 1;
+	int       last  = objc - 2;
+
+	/* Defaults */
+	*outputPtr = DO_HEX;
+	*bitlenPtr = DL_192;
+
+	for (i = first; i <= last; ++i) {
+		if (Tcl_GetIndexFromObj(interp, objv[i], options, "option",
+				0, &op) != TCL_OK) { return TCL_ERROR; }
+		switch (op) {
+			case OP_HEX:
+				*outputPtr = DO_HEX;
+			break;
+			case OP_RAW:
+				*outputPtr = DO_RAW;
+			break;
+			case OP_192:
+				*bitlenPtr = DL_192;
+			break;
+			case OP_160:
+				*bitlenPtr = DL_160;
+			break;
+			case OP_128:
+				*bitlenPtr = DL_128;
+			break;
+		}
+	}
+
+	return TCL_OK;
+}
+
+
+/*
+ *
+ */
 static int
 Tiger_Cmd(
 	ClientData clientData,  /* pointer to a TTH_State object */
@@ -31,38 +92,34 @@ Tiger_Cmd(
 	Tcl_Obj *const objv[]   /* Argument strings */
 	)
 {
-	static const char *options[] = { "-base32", "-raw", "-hex", NULL };
-	typedef enum { TO_BASE32, TO_RAW, TO_HEX } Tiger_Option;
-	int op, len;
+	int len;
 	unsigned char *dataPtr;
+	DIGEST_OUTPUT dout;
+	DIGEST_BITLEN dbitlen;
 	byte digest[TIGERSIZE];
 
 	if (objc < 2) {
 		Tcl_SetResult(interp,
-				"wrong # args: should be tiger ?options? stringValue",
+				"wrong # args: should be tiger ?options? bitstring",
 				TCL_VOLATILE);
 		return TCL_ERROR;
 	}
 
-	if (Tcl_GetIndexFromObj(interp, objv[1], options, "option",
-			0, &op) != TCL_OK) { return TCL_ERROR; }
+	if (Cmd_ParseDigestOptions(interp, objv, objc,
+				&dout, &dbitlen) != TCL_OK) { return TCL_ERROR; }
 
 	dataPtr = Tcl_GetByteArrayFromObj(objv[objc - 1], &len);
 	tiger((word64 *) dataPtr, (word64) len, (word64 *) digest);
 	tiger_to_canonical(digest);
 
-	switch (op) {
-		case TO_BASE32:
+	switch (dout) {
+		case DO_RAW:
 			Tcl_SetObjResult(interp,
-				DigestToBase32(digest));
+				DigestToRaw(digest, dbitlen));
 		break;
-		case TO_RAW:
+		case DO_HEX:
 			Tcl_SetObjResult(interp,
-				DigestToRaw(digest));
-		break;
-		case TO_HEX:
-			Tcl_SetObjResult(interp,
-				DigestToHex(digest));
+				DigestToHex(digest, dbitlen));
 		break;
 	}
 

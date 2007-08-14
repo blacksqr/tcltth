@@ -158,7 +158,7 @@ Please `cd` to its location first.
 #
 #-------------------------------------------------------------------------
 
-PROJECT = tcltth
+PROJECT = tth
 
 !include "rules.vc"
 
@@ -168,9 +168,12 @@ STUBPREFIX      = $(PROJECT)stub
 
 DLLOBJS = \
 	$(TMP_DIR)\base32.obj \
-	$(TMP_DIR)\tclcmd.obj \
 	$(TMP_DIR)\tiger.obj \
 	$(TMP_DIR)\tigertree.obj \
+	$(TMP_DIR)\tclinit.obj \
+	$(TMP_DIR)\tclout.obj \
+	$(TMP_DIR)\tcltiger.obj \
+	$(TMP_DIR)\tcltth.obj \
 !if !$(STATIC_BUILD)
 	$(TMP_DIR)\sample.res
 !endif
@@ -190,7 +193,7 @@ PRJSTUBLIBNAME	= $(STUBPREFIX)$(VERSION).lib
 PRJSTUBLIB	= $(OUT_DIR)\$(PRJSTUBLIBNAME)
 
 ### Make sure we use backslash only.
-PRJ_INSTALL_DIR         = $(_INSTALLDIR)\$(PROJECT)$(DOTVERSION)
+PRJ_INSTALL_DIR         = $(_INSTALLDIR)\tcl$(PROJECT)$(DOTVERSION)
 LIB_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
 BIN_INSTALL_DIR		= $(PRJ_INSTALL_DIR)
 DOC_INSTALL_DIR		= $(PRJ_INSTALL_DIR)

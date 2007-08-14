@@ -379,9 +379,15 @@ Cmd_ParseDigestOptions (
 {
 	int i, op;
 
-	static const char *options[] = { "-context", "-string", "-chan", "-mmap",
+	static const char *options[] = { "-context", "-string", "-chan",
+#ifdef HAVE_MMAP
+		"-mmap",
+#endif
 		"-thex", "-hex", "-raw", "-192", "-160", "-128", NULL };
-	typedef enum { OP_CONTEXT, OP_STRING, OP_CHAN, OP_MMAP,
+	typedef enum { OP_CONTEXT, OP_STRING, OP_CHAN,
+#ifdef HAVE_MMAP
+		OP_MMAP,
+#endif
 		OP_THEX, OP_HEX, OP_RAW, OP_192, OP_160, OP_128 } OPTION;
 
 	/* Options start from index 2 and the last object is always a "value": */
@@ -406,9 +412,11 @@ Cmd_ParseDigestOptions (
 			case OP_CHAN:
 				*modePtr = DM_CHAN;
 			break;
+#ifdef HAVE_MMAP
 			case OP_MMAP:
 				*modePtr = DM_MMAP;
 			break;
+#endif
 			case OP_THEX:
 				*outputPtr = DO_THEX;
 			break;
@@ -523,10 +531,12 @@ TTH_Cmd(
 					if (TTH_GetDigestFromChan(interp, dataPtr,
 								digest) != TCL_OK) { return TCL_ERROR; }
 				break;
+#ifdef HAVE_MMAP
 				case DM_MMAP:
 					if (TTH_GetDigestUsingMmap(interp, dataPtr,
 								digest) != TCL_OK) { return TCL_ERROR; }
 				break;
+#endif
 			}
 			switch (dout) {
 				case DO_THEX:

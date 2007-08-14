@@ -24,13 +24,17 @@
  *
  */
 Tcl_Obj *
-DigestToBase32 (
-		byte    digest[]
+DigestToTHEX (
+		byte           digest[],
+		DIGEST_BITLEN  bitlen
 		)
 {
 	char TTX[BASE32_DESTLEN(TIGERSIZE)];
+	int bytelen;
 
-	to_base32(digest, TIGERSIZE, TTX);
+	bytelen = bitlen / 8;
+
+	to_base32(digest, bytelen, TTX);
 	return Tcl_NewStringObj(TTX, -1);
 }
 
@@ -40,28 +44,32 @@ DigestToBase32 (
  */
 Tcl_Obj *
 DigestToRaw (
-		byte    digest[]
+		byte           digest[],
+		DIGEST_BITLEN  bitlen
 		)
 {
-	return Tcl_NewByteArrayObj(digest, TIGERSIZE);
+	return Tcl_NewByteArrayObj(digest, bitlen / 8);
 }
 
 
 Tcl_Obj *
 DigestToHex (
-		byte   digest[]
+		byte           digest[],
+		DIGEST_BITLEN  bitlen
 		)
 {
 	static const char alph[] = "0123456789abcdef";
 	int si, di;
-	const int len = TIGERSIZE * 2;
-	char hex[len];
+	int bytelen;
+	char hex[TIGERSIZE * 2];
 
-	for (si = di = 0; si < TIGERSIZE; ++si, ++di) {
+	bytelen = bitlen / 8;
+
+	for (si = di = 0; si < bytelen; ++si, ++di) {
 		hex[di]   = alph[digest[si] >> 4];
 		hex[++di] = alph[digest[si] & 0x0F];
 	}
 
-	return Tcl_NewStringObj(hex, len);
+	return Tcl_NewStringObj(hex, bytelen * 2);
 }
 

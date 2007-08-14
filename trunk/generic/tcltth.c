@@ -358,7 +358,7 @@ typedef enum {
 } DIGEST_MODE;
 
 typedef enum {
-	DO_BASE32,     /* -base32 or -ttx, default  */
+	DO_THEX,       /* -thex, default  */
 	DO_HEX,        /* -hex */
 	DO_RAW         /* -raw */
 } DIGEST_OUTPUT;
@@ -373,15 +373,16 @@ Cmd_ParseDigestOptions (
 		Tcl_Obj *const objv[],
 		int            objc,
 		DIGEST_MODE    *modePtr,
-		DIGEST_OUTPUT  *outputPtr
+		DIGEST_OUTPUT  *outputPtr,
+		DIGEST_BITLEN  *bitlenPtr
 		)
 {
 	int i, op;
 
 	static const char *options[] = { "-context", "-string", "-chan", "-mmap",
-		"-base32", "-ttx", "-hex", "-raw", NULL };
+		"-thex", "-hex", "-raw", "-192", "-160", "-128", NULL };
 	typedef enum { OP_CONTEXT, OP_STRING, OP_CHAN, OP_MMAP,
-		OP_BASE32, OP_TTX, OP_HEX, OP_RAW } OPTION;
+		OP_THEX, OP_HEX, OP_RAW, OP_192, OP_160, OP_128 } OPTION;
 
 	/* Options start from index 2 and the last object is always a "value": */
 	const int first = 2;
@@ -389,7 +390,8 @@ Cmd_ParseDigestOptions (
 
 	/* Defaults */
 	*modePtr   = DM_CONTEXT;
-	*outputPtr = DO_BASE32;
+	*outputPtr = DO_THEX;
+	*bitlenPtr = 192;
 
 	for (i = first; i <= last; ++i) {
 		if (Tcl_GetIndexFromObj(interp, objv[i], options, "option",
@@ -407,15 +409,23 @@ Cmd_ParseDigestOptions (
 			case OP_MMAP:
 				*modePtr = DM_MMAP;
 			break;
-			case OP_BASE32:
-			case OP_TTX:
-				*outputPtr = DO_BASE32;
+			case OP_THEX:
+				*outputPtr = DO_THEX;
 			break;
 			case OP_HEX:
 				*outputPtr = DO_HEX;
 			break;
 			case OP_RAW:
 				*outputPtr = DO_RAW;
+			break;
+			case OP_192:
+				*bitlenPtr = 192;
+			break;
+			case OP_160:
+				*bitlenPtr = 160;
+			break;
+			case OP_128:
+				*bitlenPtr = 128;
 			break;
 		}
 	}
@@ -456,6 +466,7 @@ TTH_Cmd(
 	Tcl_Obj *dataPtr;
 	DIGEST_MODE   dmode;
 	DIGEST_OUTPUT dout;
+	DIGEST_BITLEN dbitlen;
 	byte digest[TIGERSIZE];
 
 	if (objc == 1) {
@@ -498,7 +509,7 @@ TTH_Cmd(
 				return TCL_ERROR;
 			}
 			if (Cmd_ParseDigestOptions(interp, objv, objc,
-						&dmode, &dout) != TCL_OK) { return TCL_ERROR; }
+						&dmode, &dout, &dbitlen) != TCL_OK) { return TCL_ERROR; }
 			dataPtr = objv[objc - 1];
 			switch (dmode) {
 				case DM_CONTEXT:
@@ -518,17 +529,17 @@ TTH_Cmd(
 				break;
 			}
 			switch (dout) {
-				case DO_BASE32:
+				case DO_THEX:
 					Tcl_SetObjResult(interp,
-							DigestToBase32(digest));
+							DigestToTHEX(digest, dbitlen));
 				break;
 				case DO_HEX:
 					Tcl_SetObjResult(interp,
-							DigestToHex(digest));
+							DigestToHex(digest, dbitlen));
 				break;
 				case DO_RAW:
 					Tcl_SetObjResult(interp,
-							DigestToRaw(digest));
+							DigestToRaw(digest, dbitlen));
 				break;
 			}
 			return TCL_OK;

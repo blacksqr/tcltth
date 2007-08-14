@@ -10,6 +10,9 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
 package require tth
 namespace import ::tth::*
 
+# Constraints
+testConstraint have_mmap 0
+
 # Syntax things:
 
 test tth-1.1 {generation of unique TTH context tags} -body {
@@ -189,7 +192,9 @@ test tth-chan-ttx-1.4 {TTH on a file of 1025 "A" characters using -chan} -setup 
 # Testvectors from "Tree Hash EXchange format (THEX)" draft
 # http://open-content.net/specs/draft-jchapweske-thex-02.html
 
-test tth-mmap-ttx-1.1 {TTH on zero-length file using -mmap} -setup {
+test tth-mmap-ttx-1.1 {TTH on zero-length file using -mmap} -constraints {
+	have_mmap
+} -setup {
 	makeFile {} EMPTY
 	set fd [open EMPTY w+] ;# truncate file
 	close $fd
@@ -199,7 +204,9 @@ test tth-mmap-ttx-1.1 {TTH on zero-length file using -mmap} -setup {
 	tth digest -mmap EMPTY
 } -result LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
 
-test tth-mmap-ttx-1.2 {TTH on a file with one zero byte using -mmap} -setup {
+test tth-mmap-ttx-1.2 {TTH on a file with one zero byte using -mmap} -constraints {
+	have_mmap
+} -setup {
 	makeFile {} ZERO
 	set fd [open ZERO w+]
 	fconfigure $fd -translation binary
@@ -211,7 +218,9 @@ test tth-mmap-ttx-1.2 {TTH on a file with one zero byte using -mmap} -setup {
 	tth digest -mmap ZERO
 } -result VK54ZIEEVTWNAUI5D5RDFIL37LX2IQNSTAXFKSA
 
-test tth-mmap-ttx-1.3 {TTH on a file of 1024 "A" characters using -mmap} -setup {
+test tth-mmap-ttx-1.3 {TTH on a file of 1024 "A" characters using -mmap} -constraints {
+	have_mmap
+} -setup {
 	makeFile {} 1024A
 	set fd [open 1024A w+]
 	fconfigure $fd -translation binary
@@ -223,7 +232,9 @@ test tth-mmap-ttx-1.3 {TTH on a file of 1024 "A" characters using -mmap} -setup 
 	tth digest -mmap 1024A
 } -result L66Q4YVNAFWVS23X2HJIRA5ZJ7WXR3F26RSASFA
 
-test tth-mmap-ttx-1.4 {TTH on a file of 1025 "A" characters using -mmap} -setup {
+test tth-mmap-ttx-1.4 {TTH on a file of 1025 "A" characters using -mmap} -constraints {
+	have_mmap
+} -setup {
 	makeFile {} 1025A
 	set fd [open 1025A w+]
 	fconfigure $fd -translation binary

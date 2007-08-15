@@ -70,7 +70,7 @@ different peers to provide for so-called "multiple segment
 downloading". Implementation of TTH with THEX was the immediate goal
 for creation of this module.
 
-[subsection {Note on output format}]
+[subsection {Notes on output format}]
 
 The Tiger Hash specification defines the result of applying this
 algorithm as three 64-bit (wide) words, and no
@@ -84,7 +84,7 @@ This module uses the format that is known to be the accepted
 practice and is also documented in the official test vectors for
 the Tiger Hash (v1) (provided by the NESSIE project).
 This format defines the resulting bitstring as if the three
-64-bit words of the calculated digest are turned little endian
+64-bit words of the calculated digest are turned little-endian
 and then concatenated left-to-right from the first to the third.
 "Little-endian" in this case means "least significant [emph octet]
 first", not [emph bit.]
@@ -120,8 +120,170 @@ from them.
 TODO: provide more info on constructing binary strings from
 Tcl's "lists of bits" and padding for them.
 
+[section {COMMON OPTIONS}]
+
+All commands in this package accept options.  Options are parsed
+from left to right and for the sake of simplcity no conflicts
+between them, if any, are reported -- later options simply
+override earlier. Some options select default parameters and are
+redundant.
+
+[para]
+
+Several options controlling the format of the resulting digest
+are common to both commands; they are:
+[list_begin opt]
+	[opt_def -192]
+	Requests the length of the resultig hash to be 192 bits (or
+	24 octets).  This is the so-called full hash length, Tiger
+	Hash is always computed as a 192-bit sequence. This length
+	is recommended for usage by the authors of the Tiger Hash
+	algorythm.
+
+	[opt_def -160]
+	Requests the length of the resulting hash to be
+	160 bits (or 20 octets). These are just the first 160 bits
+	of the full-length 192 bit hash.
+
+	[opt_def -128]
+	Requests the length of the requlting hash to be
+	128 bits (or 16 octets). These are just the first 128 bits
+	of the full-length 192 bit hash.
+
+	[opt_def -hex]
+	Requests the output format to be a string of
+	lowercase hexadecimal digit characters representing
+	octets of the resulting hash (first octet goes as the
+	two leftmost characters in the string and so on).
+	This format is analogous to that used by the [cmd {md5 -hex}]
+	command from tcllib, for example.
+
+	[opt_def -raw]
+	Requests the output format to be a "raw" bitstring, i.e. the
+	hash as it was computed (but see [sectref {Notes on output
+	format}] above).
+[list_end]
+
 [section COMMANDS]
 
+[subsection [cmd tth::tiger]]
+
+This command generates the digest of the supplied bitstring
+using the Tiger Hash (v1) algorithm.
+The format of this command is:
+[list_begin definitions]
+	[call tth::tiger [opt options] [arg bitstring]]
+[list_end]
+
+[comment {TODO: provide proper invocation format}]
+
+[para]
+
+The valid options are:
+[list_begin opt]
+	[opt_def -192]
+	[emph (Default)]
+	Requests the length of the resultig hash to be 192 bits.
+
+	[opt_def -160]
+	Requests the length of the resultig hash to be 160 bits.
+
+	[opt_def -128]
+	Requests the length of the resultig hash to be 128 bits.
+
+	[opt_def -hex]
+	[emph (Default)]
+	Requests the format of the result to be a string of
+	hexadecimal digit characters representing octets of
+	the resulting hash.
+
+	[opt_def -raw]
+	Requests the format of the result to be a "raw" bistring
+	as was computed by the algorithm.
+[list_end]
+
+[para]
+
+See [sectref {COMMON OPTIONS}] for more detailed description
+of these options.
+
+[para]
+
+This command returns the calculated digest using selected
+output format. The default format is hexadecimal representation
+of the full 192-bit result.
+
+[subsection [cmd tth::tth]]
+
+This command calculates digest of the input data using the Tiger
+Three Hash algorythm. It has several modes of operation:
+[list_begin bullet]
+	[bullet]
+	Processing of the supplied bitstring (in the same way as
+	[cmd tth::tiger] works).
+
+	[bullet]
+	Processing all the data from the given Tcl channel from the
+	current stream position (if any) to its EOF.
+
+	[bullet]
+	"Gradual update" mode: the digest "context" is created first
+	and the handle to it is passed to the user code. Then the
+	user can sequentially update the digest with arbitrary
+	number of data chunks of arbitrary size using that handle.
+	Finally, the digest is returned when requested and the
+	context is freed.
+[list_end]
+
+[section EXAMPLES]
+
+[section NOTES]
+
+[subsection {THEX format}]
+
+[subsection {USAGE CONSIDERATIONS}]
+
+[section BUGS]
+
+The current version of this package also supports one
+undocumented option to the [cmd tth::tth] command:
+[option -mmap], support for which is enabled and compiled in on
+platforms which have support for [fun mmap()] and
+[fun munmap()] syscalls (namely, systems conforming to POSIX).
+This option is semantically analogous to the [option -chan] and
+[option -string] options and accepts the name of a file to
+be processed.
+The file is read sequentially using [fun mmap()]/[fun munmap()]
+calls. This approach has surprisingly proven to be much slower
+than the current top-speed method -- [option -chan].
+So the future of this option is uncertain.
+
+[para]
+
+Two Microsoft compilers (v12.00 and v14.00) were tested on
+Windows and it turned out that they generate very slow code
+which is almost two times slower than what MinGW with GCC 3.4.5
+produce from the same sources. The reason for this is unknown.
+
+[section AUTHORS]
+
+This package is created by
+Konstantin Khomoutov <flatworm@users.sourceforge.net>
+
+[section CREDITS]
+
+[list_begin bullet]
+	[bullet]
+	The implementation of the Tiger Hash algorithm used in this
+	package is done by its authors: Eli Biham and Ross Anderson.
+
+	[bullet]
+	The implementation of the Tiger Tree Hash algorythm used in
+	this package is done by Gordon Mohr in its "tigertree"
+	project.
+[list_end]
+
+[see_also tcllib base32 base64 md5 sha1]
 [comment {vim:sytnax=tcl:tw=72:noet}]
 [manpage_end]
 

@@ -16,14 +16,14 @@
 #undef BIG_ENDIAN
 #endif /* WORDS_BIGENDIAN */
 
-#if defined(_MSC_VER) || defined(__WATCOMC__)
+#if (defined(_MSC_VER) && _MSC_VER < 1400) || defined(__WATCOMC__)
 #define LL(x) (x##i64)
 #define ULL(x) (x##Ui64)
 typedef unsigned __int64 word64;
 #else
 #define LL(x) (x##LL)
 #define ULL(x) (x##ULL)
-typedef unsigned long long int word64;
+typedef unsigned long long word64;
 #endif
 
 /* TODO

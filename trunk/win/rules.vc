@@ -121,6 +121,10 @@ OPTIMIZATIONS  = $(OPTIMIZATIONS) -GS
 OPTIMIZATIONS  = $(OPTIMIZATIONS) -GL
 !endif
 
+!if [nmakehlp -c -Ox]
+OPTIMIZATIONS  = $(OPTIMIZATIONS) -Ox
+!endif
+
 DEBUGFLAGS     =
 
 !if [nmakehlp -c -RTC1]

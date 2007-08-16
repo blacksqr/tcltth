@@ -284,7 +284,7 @@ options controlling the output format of the resulting digest:
 	Requests the format of the result to be a string of ASCII
 	characters representing the resulting digest in the
 	Tree Hash Exchange format.
-	See [sectref {THEX format}] for details.
+	See [sectref {THEX FORMAT}] for details.
 
 	[opt_def -hex]
 	Requests the format of the result to be a string of
@@ -296,13 +296,102 @@ options controlling the output format of the resulting digest:
 	as was computed by the algorithm.
 [list_end]
 
+[section {THEX FORMAT}]
+
+Tree Hash Exchange (THEX) format is described in
+[sectref REFERENCES [lb]2[rb]].
+
+[para]
+
+The specification presented in this document is somewhat
+complicated since it tries to cover not only the format of the
+hash itself but also a higher-level framework for its
+encapsulation.
+What is meant under the term "THEX format" as implemented by
+this package is a rather more simple thing: just a form of
+"ASCII-armouring" of the Tiger Hash as specified by
+the aforementioned document.
+
+[para]
+
+This kind of armouring is just a Base32 encoding applied to the
+bitstring of the resulting hash. This is
+[strong not] [emph strictly] a
+Base32 encoding though: Base32 encoding operates on 40-bit
+groups of the source bitstring and uses "padding" (adding of the
+"=" character at the end of the output string) to specify that
+the length of the source string isn't an integer multiply of 40
+bits (see [sectref REFERENCES [lb]3[rb]]).
+THEX format doesn't use such padding, so the transformation of
+a TTH bitstring to the THEX format is roughly equivalent to this
+code (using [package base32] package from [package tcllib]):
+[example {
+package require base32
+package require tth
+set hash [tth::tth digest -raw -string $source]
+set thex [string trimright = [base32::encode $hash]]
+}]
+
+To illustrate, here's what generates [cmd {tth::tth digest}] with
+the [option -thex] option and [cmd base32::encode]
+from the [package base32] package applied to the same bitstrings:
+
+[example {
+package require base32
+package require tth
+
+% ::tth::tth digest -thex -192 -string ""
+LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ
+% ::base32::encode [::tth::tth digest -raw -192 -string ""]
+LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ=
+
+% ::tth::tth digest -thex -160 -string ""
+LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHH
+% ::base32::encode [::tth::tth digest -raw -160 -string ""]
+LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHH
+
+% ::tth::tth digest -thex -128 -string ""
+LWPNACQDBZRYXW3VHJVCJ64QBY
+% ::base32::encode [::tth::tth digest -raw -128 -string ""]
+LWPNACQDBZRYXW3VHJVCJ64QBY======
+}]
+
+As can be seen, only bitstrings of 160 bits produce equal
+results when fed to both methods since 160 is an intergal
+multiply of 40.
+
+[para]
+
+Another thing which is worth mentioning is that the THEX
+format document doesn't specify permitted lengths of hash
+bitstrings to be used. So the implementation of this package
+assumes that bitstrings of 160 and 128 bits are allowed to be
+formatted using THEX.
+
+[para]
+
+Note also that both DirectConnect (NMDC) and ADC use
+(canonical) 192-bit hashes and transmit them using THEX format.
+
+[section {USAGE CONSIDERATIONS}]
+
 [section EXAMPLES]
 
-[section NOTES]
+[section REFERENCES]
 
-[subsection {THEX format}]
+[list_begin enum]
+	[enum]
+	Tiger Hash home page:
+	http://www.cs.technion.ac.il/~biham/Reports/Tiger/
 
-[subsection {USAGE CONSIDERATIONS}]
+	[enum]
+	Tree Hash Exchange (THEX) memo:
+	http://www.open-content.net/specs/draft-jchapweske-thex-02.html
+
+	[enum]
+	"The Base16, Base32, and Base64 Data Encodings" (RFC):
+	http://tools.ietf.org/html/rfc4648
+[list_end]
 
 [section BUGS]
 
@@ -318,13 +407,6 @@ The file is read sequentially using [fun mmap()]/[fun munmap()]
 calls. This approach has surprisingly proven to be much slower
 than the current top-speed method -- [option -chan].
 So the future of this option is uncertain.
-
-[para]
-
-Two Microsoft compilers (v12.00 and v14.00) were tested on
-Windows and it turned out that they generate very slow code
-which is almost two times slower than what MinGW with GCC 3.4.5
-produce from the same sources. The reason for this is unknown.
 
 [section AUTHORS]
 

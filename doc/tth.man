@@ -6,12 +6,14 @@
 
 [require Tcl ?8.1?]
 [require tth ?0.1?]
+[comment {
 [usage [cmd tth::tiger] [opt options] [arg bitstring]]
 [usage [cmd tth::tth] [cmd digest] [opt options] [cmd -string] [arg bitstring]]
 [usage [cmd tth::tth] [cmd digest] [opt options] [cmd -chan] [arg channel]]
 [usage [cmd set] tthContext \[[cmd tth::tth] [cmd init]\]]
 [usage [cmd tth::tth] [cmd update] [arg tthContext] [arg bitstring]]
 [usage [cmd tth::tth] [cmd digest] [opt -context] [arg tthContext]]
+}]
 
 [description]
 
@@ -233,6 +235,65 @@ Three Hash algorythm. It has several modes of operation:
 	number of data chunks of arbitrary size using that handle.
 	Finally, the digest is returned when requested and the
 	context is freed.
+[list_end]
+
+[para]
+
+Contrary to [cmd tth::tiger], this command has several subcommands:
+[list_begin definitions]
+	[call {tth::tth init}]
+	Allocates new digest context and returns a handle to it.
+	This subcommand accepts no arguments.
+
+	[call {tth::tth update} [arg tthContext] [arg bitstring]]
+	Updates the digest associated with the given [arg tthContext]
+	using provided [arg bitstring].
+
+	[call {tth::tth digest} [opt options] [opt -context] [arg tthContext]]
+	Returns the digest associated with the given [arg tthContext].
+	That context is automatically freed after this command is
+	finished; any futher attempts to use it will fail.
+
+	[call {tth::tth digest} [opt options] [option -string] [arg bitstring]]
+	Calculates Tiger Tree Hash on a given bitstring and returns
+	it as a result.
+
+	[call {tth::tth digest} [opt options] [option -chan] [arg tclChannel]]
+	Reads the data from a given open Tcl channel from its current position
+	until end-of-file condition and calculates Tiger Tree Hash on this
+	data. The resulting hash is returned.
+[list_end]
+
+[para]
+
+Each form of the [cmd {tth::tth digest}] subcommand accepts several
+options controlling the output format of the resulting digest:
+[list_begin opt]
+	[opt_def -192]
+	[emph (Default)]
+	Requests the length of the resultig hash to be 192 bits.
+
+	[opt_def -160]
+	Requests the length of the resultig hash to be 160 bits.
+
+	[opt_def -128]
+	Requests the length of the resultig hash to be 128 bits.
+
+	[opt_def -thex]
+	[emph (Default)]
+	Requests the format of the result to be a string of ASCII
+	characters representing the resulting digest in the
+	Tree Hash Exchange format.
+	See [sectref {THEX format}] for details.
+
+	[opt_def -hex]
+	Requests the format of the result to be a string of
+	hexadecimal digit characters representing octets of
+	the resulting hash.
+
+	[opt_def -raw]
+	Requests the format of the result to be a "raw" bistring
+	as was computed by the algorithm.
 [list_end]
 
 [section EXAMPLES]

@@ -96,6 +96,19 @@ test tiger-hex-1.9 {hex digest of 1 million times "a"} -body {
 	string toupper [tiger -hex [string repeat a 1000000]]
 } -result 6DB0E2729CBEAD93D715C6A7D36302E9B3CEE0D2BC314B41
 
+# tiger, -raw.
+# NESSIE testvectors.
+
+test tiger-raw-1.1 {} -body {
+	binary scan [tiger -raw ""] H* bytes
+	string toupper $bytes
+} -result 3293AC630C13F0245F92BBB1766E16167A4E58492DDE73F3
+
+test tiger-raw-1.9 {hex digest of 1 million times "a"} -body {
+	binary scan [tiger -raw [string repeat a 1000000]] W* words
+	eval format %.8lX%.8lX%.8lX $words
+} -result 6DB0E2729CBEAD93D715C6A7D36302E9B3CEE0D2BC314B41
+
 # tth:
 # -chan safety checks:
 

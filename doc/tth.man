@@ -58,9 +58,10 @@ returned.
 
 [cmd tth] supports the same bit lengths and output formats as
 [cmd tiger] plus one additional format called Tree Hash Exchange
-(or THEX for short). This is essentially a base32 representation
+(or THEX for short). This is essentially a Base32 representation
 of the resulting digest with any trailing "=" characters resulting
-from the base32 "padding" removed.
+from the base32 "padding" removed
+(See also [sectref {THEX FORMAT}]).
 
 [para]
 
@@ -86,9 +87,9 @@ This module uses the format that is known to be the accepted
 practice and is also documented in the official test vectors for
 the Tiger Hash (v1) (provided by the NESSIE project).
 This format defines the resulting bitstring as if the three
-64-bit words of the calculated digest are turned little-endian
+64-bit words of the calculated digest are turned big-endian
 and then concatenated left-to-right from the first to the third.
-"Little-endian" in this case means "least significant [emph octet]
+"Big-endian" in this case means "most significant [emph octet]
 first", not [emph bit.]
 
 [para]
@@ -105,7 +106,8 @@ This means that if you need to get your hands on the original
 three 64-bit words of the resulting digest you have to
 apply something like this to the result of the provided
 commands (assuming they are told to output the "raw" bitstring):
-[comment {example with [binary scan c* $raw_result words] here}]
+
+[example {binary scan [tth::tiger -raw $input] W* words}]
 
 [subsection {Notes on input format}]
 
@@ -218,7 +220,8 @@ of the full 192-bit result.
 [subsection [cmd tth::tth]]
 
 This command calculates digest of the input data using the Tiger
-Three Hash algorythm. It has several modes of operation:
+Three Hash algorythm processing the input data by 1024-byte blocks.
+It has several modes of operation:
 [list_begin bullet]
 	[bullet]
 	Processing of the supplied bitstring (in the same way as
@@ -248,9 +251,13 @@ Contrary to [cmd tth::tiger], this command has several subcommands:
 	[call {tth::tth update} [arg tthContext] [arg bitstring]]
 	Updates the digest associated with the given [arg tthContext]
 	using provided [arg bitstring].
+	[arg tthContext] must be a value
+	returned by a previous call to [cmd {tth::tth init}].
 
 	[call {tth::tth digest} [opt options] [opt -context] [arg tthContext]]
 	Returns the digest associated with the given [arg tthContext].
+	[arg tthContext] must be a value
+	returned by a previous call to [cmd {tth::tth init}].
 	That context is automatically freed after this command is
 	finished; any futher attempts to use it will fail.
 
@@ -262,6 +269,7 @@ Contrary to [cmd tth::tiger], this command has several subcommands:
 	Reads the data from a given open Tcl channel from its current position
 	until end-of-file condition and calculates Tiger Tree Hash on this
 	data. The resulting hash is returned.
+	See [sectref {USAGE CONSIDERATIONS}] for additional details.
 [list_end]
 
 [para]
@@ -375,7 +383,58 @@ Note also that both DirectConnect (NMDC) and ADC use
 
 [section {USAGE CONSIDERATIONS}]
 
+TODO: stress that data almost always should come from binary
+channels, if they're used.
+
 [section EXAMPLES]
+
+[list_begin bullet]
+	[bullet]
+	Calculate TTH on a file:
+	[example {
+set fd [open somefile.dat]
+fconfigure $fd -translation binary
+set hash [tth::tth digest -chan $fd]
+close $fd
+	}]
+
+	[bullet]
+	Calculate TTH of a data being read from an asynchronous
+	network socket:
+	[example {
+set sock [socket $host $port]
+
+variable $sock
+upvar 0 $sock state
+
+set state(context) [tth::tth init]
+
+fconfigure $sock -translation binary -blocking no
+fileevent readable $sock [list ::GetData $sock]
+
+proc ::GetData sock {
+	variable $sock
+	upvar 0 $sock state
+
+	if {![eof $sock]} {
+		# Update digest with the new chunk of data:
+		tth::tth update $state(context) [read $sock]
+	} else {
+		# Get final digest and close the socket
+		# (TTH context will be freed automatically):
+		set state(digest) [tth::tth digest $state(context)]
+		close $sock
+	}
+}
+
+vwait ${sock}(digest)
+
+puts "Digest is: $state(digest)"
+
+unset state
+	}]
+
+[list_end]
 
 [section REFERENCES]
 

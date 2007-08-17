@@ -17,16 +17,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_MMAP
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#endif
 
 #include "tigertree.h"
 #include "tclout.h"
+#include "tclmmap.h"
 #include "tcltth.h"
 
 /*
@@ -268,88 +262,6 @@ TTH_GetDigestFromChan (
 /*
  *
  */
-#ifdef HAVE_MMAP
-static int
-TTH_GetDigestUsingMmap (
-		Tcl_Interp   *interp,
-		Tcl_Obj      *filePtr,
-		byte         digest[]
-		)
-{
-	int fd;
-	off_t offset, len;
-	TT_CONTEXT context;
-	byte *dataPtr;
-	long pagesize;
-	struct stat finfo;
-
-	fd = open(Tcl_GetString(filePtr), O_RDONLY);
-	if (fd == -1) {
-		Tcl_ResetResult(interp);
-		Tcl_AppendResult(interp, "failed to open file named \"",
-				Tcl_GetString(filePtr), "\"", NULL);
-		return TCL_ERROR;
-	}
-
-	tt_init(&context);
-
-#ifdef _SC_PAGESIZE
-	pagesize = sysconf(_SC_PAGESIZE);
-#else
-#ifdef _SC_PAGE_SIZE
-	pagesize = sysconf(_SC_PAGE_SIZE);
-#else
-#error Neither _SC_PAGESIZE nor _SC_PAGE_SIZE is defined
-#endif
-#endif
-
-	/* pagesize *= 1024; */
-
-	if (fstat(fd, &finfo) == -1) {
-		Tcl_ResetResult(interp);
-		Tcl_AppendResult(interp, "failed to stat file named \"",
-				Tcl_GetString(filePtr), "\"", NULL);
-		close(fd);
-		return TCL_ERROR;
-	}
-
-	offset = 0;
-	while (offset < finfo.st_size) {
-		if (finfo.st_size - offset < pagesize) {
-			len = finfo.st_size - offset;
-		} else {
-			len = pagesize;
-		}
-		dataPtr = (byte *) mmap(0, len, PROT_READ, MAP_SHARED, fd, offset);
-		if (dataPtr == MAP_FAILED) {
-			Tcl_ResetResult(interp);
-			Tcl_AppendResult(interp, "mmap() failed on file named \"",
-					Tcl_GetString(filePtr), "\"", NULL);
-			close(fd);
-			return TCL_ERROR;
-		}
-		tt_update(&context, dataPtr, len);
-		if (munmap(dataPtr, len) == -1) {
-			Tcl_ResetResult(interp);
-			Tcl_AppendResult(interp, "munmap() failed on file named \"",
-					Tcl_GetString(filePtr), "\"", NULL);
-			close(fd);
-			return TCL_ERROR;
-		}
-		offset += len;
-	}
-
-	tt_digest(&context, digest);
-	close(fd);
-
-	return TCL_OK;
-}
-#endif
-
-
-/*
- *
- */
 typedef enum {
 	DM_CONTEXT,   /* -context, default */
 	DM_STRING,    /* -string */
@@ -380,12 +292,12 @@ Cmd_ParseDigestOptions (
 	int i, op;
 
 	static const char *options[] = { "-context", "-string", "-chan",
-#ifdef HAVE_MMAP
+#ifdef USE_MMAP
 		"-mmap",
 #endif
 		"-thex", "-hex", "-raw", "-192", "-160", "-128", NULL };
 	typedef enum { OP_CONTEXT, OP_STRING, OP_CHAN,
-#ifdef HAVE_MMAP
+#ifdef USE_MMAP
 		OP_MMAP,
 #endif
 		OP_THEX, OP_HEX, OP_RAW, OP_192, OP_160, OP_128 } OPTION;
@@ -412,7 +324,7 @@ Cmd_ParseDigestOptions (
 			case OP_CHAN:
 				*modePtr = DM_CHAN;
 			break;
-#ifdef HAVE_MMAP
+#ifdef USE_MMAP
 			case OP_MMAP:
 				*modePtr = DM_MMAP;
 			break;
@@ -531,7 +443,7 @@ TTH_Cmd(
 					if (TTH_GetDigestFromChan(interp, dataPtr,
 								digest) != TCL_OK) { return TCL_ERROR; }
 				break;
-#ifdef HAVE_MMAP
+#ifdef USE_MMAP
 				case DM_MMAP:
 					if (TTH_GetDigestUsingMmap(interp, dataPtr,
 								digest) != TCL_OK) { return TCL_ERROR; }

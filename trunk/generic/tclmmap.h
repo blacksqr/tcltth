@@ -17,13 +17,13 @@
 #ifndef __TCLMMAP_H
 #define __TCLMMAP_H
 
-#if defined(WINDOWS) || defined HAVE_MMAP
+#if defined(_WIN32) || defined(HAVE_MMAP)
 
-#define USE_MMAP
+#define USE_MMAP 1
 
 #include <tcl.h>
 
-static int
+int
 TTH_GetDigestUsingMmap (
 		Tcl_Interp   *interp,
 		Tcl_Obj      *filePtr,
@@ -37,4 +37,3 @@ TTH_GetDigestUsingMmap (
 #endif /* defined(WINDOWS) || HAVE_MMAP */
 
 #endif /* ifdef __TCLMMAP_H */
-

@@ -22,6 +22,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "tiger.h"
+#include "tigertree.h"
 #include "tclmmap.h"
 
 /*

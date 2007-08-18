@@ -5,7 +5,7 @@ proc test_chan fname {
   set fd [open $fname]
   fconfigure $fd -translation binary
   set start [clock seconds]
-  set hash [tth::tth digest -ttx -chan $fd]
+  set hash [tth::tth digest -thex -chan $fd]
   set intvl [expr {[clock seconds] - $start}]
   close $fd
   if {$intvl > 0} {

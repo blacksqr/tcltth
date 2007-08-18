@@ -17,8 +17,13 @@
 #define WINDOWS_LEAN_AND_MEAN
 #include <windows.h>
 
+#include "tclmmap.h"
 #include "tiger.h"
 #include "tigertree.h"
+
+#include <tclInt.h>
+#include <tclIntDecls.h>
+#include <tclIntPlatDecls.h>
 
 int
 TTH_GetDigestUsingMmap (
@@ -29,13 +34,14 @@ TTH_GetDigestUsingMmap (
 {
 	SYSTEM_INFO sysinfo;
 	TT_CONTEXT context;
-	CONST TCHAR *nativeName;
+	CONST TCHAR *nativeName = "C:\\video\\1984.mkv";
 	HANDLE hFile, hMap;
 	DWORD fsizeLow, fsizeHigh;
 	word64 fsize, offset;
 	DWORD pagesize, len;
 	byte *dataPtr;
 
+	/*
 	nativeName = (TCHAR*) Tcl_FSGetNativePath(filePtr);
 	if (nativeName == NULL) {
 		Tcl_ResetResult(interp);
@@ -43,13 +49,16 @@ TTH_GetDigestUsingMmap (
 				Tcl_GetString(filePtr), "\"", NULL);
 		return TCL_ERROR;
 	}
+	*/
 
 	hFile = CreateFile(nativeName, GENERIC_READ, FILE_SHARE_READ, NULL,
 			OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
+		TclWinConvertError(GetLastError());
 		Tcl_ResetResult(interp);
 		Tcl_AppendResult(interp, "failed to open file named \"",
-				Tcl_GetString(filePtr), "\"", NULL);
+				Tcl_GetString(filePtr), "\"",
+				Tcl_PosixError(interp), NULL);
 		/* TODO provide error message */
 		return TCL_ERROR;
 	}
@@ -64,31 +73,36 @@ TTH_GetDigestUsingMmap (
 	fsize = ((word64)fsizeHigh << 32) | (word64)fsizeLow;
 
 	hMap = CreateFileMapping(hFile, NULL, PAGE_READONLY,
-			fsizeLow, fsizeHigh, NULL);
+			fsizeHigh, fsizeLow, NULL);
 	if (hMap == NULL) {
+		TclWinConvertError(GetLastError());
 		Tcl_ResetResult(interp);
-		Tcl_AppendResult(interp, "failed to create file mapping", NULL);
+		Tcl_AppendResult(interp, "failed to create file mapping",
+			Tcl_PosixError(interp),	NULL);
 		CloseHandle(hFile);
 		return TCL_ERROR;
 	}
 
 	GetSystemInfo(&sysinfo);
 	pagesize = sysinfo.dwPageSize * 1024;
+	/* pagesize = sysinfo.dwPageSize; */
 
 	tt_init(&context);
 
 	offset = 0;
 	while (offset < fsize) {
 		if (fsize - offset < pagesize) {
-			len = fsize - offset;
+			len = (DWORD) fsize - offset;
 		} else {
 			len = pagesize;
 		}
 		dataPtr = MapViewOfFile(hMap, FILE_MAP_READ, 
-				(offset >> 32), offset & 0xFFFFFFFF, len);
+				(offset >> 32), offset & ULL(0xFFFFFFFF), len);
 		if (dataPtr == NULL) {
+			TclWinConvertError(GetLastError());
 			Tcl_ResetResult(interp);
-			Tcl_AppendResult(interp, "failed to map view of file", NULL);
+			Tcl_AppendResult(interp, "failed to map view of file",
+					Tcl_PosixError(interp), NULL);
 			CloseHandle(hMap);
 			CloseHandle(hFile);
 			return TCL_ERROR;
